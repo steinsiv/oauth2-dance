@@ -56,7 +56,6 @@ export const requestToken = async (
   });
 
   const response = await fetch(request);
-
   if (response.status == 400) {
     return processTokenErrorResponse(response);
   }

@@ -50,7 +50,7 @@ router.get("/authme", (context) => {
 });
 
 router.get("/callback", async (ctx) => {
-  // @TODO: Returns NULL on error after processing. refactor.
+  // @TODO: Returns NULL on error after processing. handle.
   const response = processAuthorization(ctx.request.url, client.state);
   console.log(
     `-> GET /callback, code : ${response?.code}, state: ${response?.state}`,
@@ -73,7 +73,11 @@ router.get("/callback", async (ctx) => {
       console.log("Token: ", tokenResponse);
     }
   }
-  ctx.response.redirect("/");
+  ctx.response.redirect("/hooray");
+});
+
+router.get("/hooray", (context) => {
+  context.response.body = "You're in!";
 });
 
 app.use(router.routes());
