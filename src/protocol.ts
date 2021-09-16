@@ -3,7 +3,7 @@ export type AuthorizationRequestOptions = {
   response_type: "code";
   client_id: string;
   redirect_uri: string;
-  state: string;
+  state?: string;
   scope: string;
   code_challenge: string;
   code_challenge_method: string;
@@ -12,20 +12,6 @@ export type AuthorizationRequestOptions = {
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
 export type AuthorizationResponseOptions = {
   code: string;
-  state: string;
-};
-
-// https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1
-export type AuthorizationErrorResponseOptions = {
-  error:
-    | "invalid_request"
-    | "invalid_client"
-    | "invalid_grant"
-    | "unauthorized_client"
-    | "unsupported_grant_type"
-    | "invalid_scope";
-  error_description?: string;
-  error_uri?: string;
   state?: string;
 };
 
@@ -50,7 +36,7 @@ export type AccessTokenResponseOptions = {
 };
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-export type AccessTokenErrorResponseOptions = {
+export type ErrorResponseOptions = {
   error:
     | "invalid_request"
     | "invalid_client"
@@ -61,6 +47,14 @@ export type AccessTokenErrorResponseOptions = {
   error_description?: string;
   error_uri?: string;
 };
+
+// https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1
+export type AuthorizationErrorResponseOptions = ErrorResponseOptions & {
+  state?: string;
+};
+
+// https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
+export type AccessTokenErrorResponseOptions = ErrorResponseOptions & {};
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-6
 export type RefreshTokenRequestOptions = {

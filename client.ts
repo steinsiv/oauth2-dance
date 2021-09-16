@@ -2,7 +2,7 @@
 import { AccessTokenRequestOptions, AuthorizationRequestOptions } from "./src/protocol.ts";
 import { processAuthorization } from "./src/utils.ts";
 import { requestToken, URLAuthorizeRequest } from "./src/oauth2.ts";
-import { Application, createHash, dotEnvConfig, Router } from "./deps.ts";
+import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
 
 const router = new Router();
 const env = dotEnvConfig();
@@ -20,8 +20,8 @@ const client = {
   clientSecret: env.DENO_CLIENT_SECRET,
   redirectURL: env.DENO_CLIENT_REDIRECT_URL,
   scope: "foo",
-  state: globalThis.crypto.randomUUID(),
-  code_verifier: globalThis.crypto.randomUUID(),
+  state: cryptoRandomString({ length: 8, type: "url-safe" }),
+  code_verifier: cryptoRandomString({ length: 32, type: "ascii-printable" }),
 };
 
 hash.update(client.code_verifier);
