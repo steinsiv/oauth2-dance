@@ -1,9 +1,5 @@
-import {
-  AccessTokenRequestOptions,
-  AccessTokenResponseOptions,
-  AuthorizationRequestOptions,
-} from "./protocol.ts";
-import { processTokenErrorResponse } from "./utils.ts";
+import { AccessTokenRequestOptions, AccessTokenResponseOptions, AuthorizationRequestOptions } from "./protocol.ts";
+import { processTokenErrorResponse, processTokenResponse } from "./utils.ts";
 
 export const URLAuthorizeRequest = (
   url: string,
@@ -40,11 +36,12 @@ export const requestToken = async (
   url: string,
   options: AccessTokenRequestOptions,
 ): Promise<AccessTokenResponseOptions | null> => {
-  const formdata = new FormData();
   const creds = options.client_id + ":" + options.client_secret;
-  formdata.append("grant_type", options.grant_type);
-  formdata.append("code", options.code);
-  formdata.append("redirect_uri", options.redirect_uri);
+  const formData: string[] = [];
+  formData.push(`grant_type=${options.grant_type}`);
+  formData.push(`code=${options.code}`);
+  formData.push(`redirect_uri=${options.redirect_uri}`);
+  formData.push(`code_verifier=${options.code_verifier}`);
 
   const request = new Request(url, {
     method: "POST",
@@ -52,16 +49,13 @@ export const requestToken = async (
       "Content-Type": "application/x-www-form-urlencoded",
       "Authorization": `Basic ${btoa(creds)}`,
     },
-    body: formdata,
+    body: formData.join("&"),
   });
 
   const response = await fetch(request);
-  if (response.status == 400) {
+  if (response.status !== 200) {
     return processTokenErrorResponse(response);
   }
-  return null;
-  //return processTokenResponse(response);
 
-  //const content = await response.json();
-  //return content;
+  return processTokenResponse(response);
 };
