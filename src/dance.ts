@@ -2,6 +2,7 @@ import {
   AccessTokenErrorResponseOptions,
   AccessTokenResponseOptions,
   AuthorizationErrorResponseOptions,
+  AuthorizationRequestOptions,
   AuthorizationResponseOptions,
 } from "./protocol.ts";
 
@@ -18,8 +19,15 @@ export const processAuthorizeErrorResponse = (redirectionURI: URL) => {
   return null;
 };
 
+export const processAuthorizationRequest = (): AuthorizationRequestOptions | null => {
+  return null;
+};
+
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
-export const processAuthorization = (redirectionURI: URL, state: string): AuthorizationResponseOptions | null => {
+export const processAuthorizationResponse = (
+  redirectionURI: URL,
+  state: string,
+): AuthorizationResponseOptions | null => {
   const parameters = redirectionURI.searchParams;
   if (parameters.get("error") !== null) return processAuthorizeErrorResponse(redirectionURI);
   if (state && !parameters.has("state") && parameters.get("state") !== state) {

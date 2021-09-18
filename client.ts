@@ -1,6 +1,6 @@
 // deno-lint-ignore-file
 import { AccessTokenRequestOptions, AuthorizationRequestOptions } from "./src/protocol.ts";
-import { processAuthorization } from "./src/utils.ts";
+import { processAuthorizationResponse } from "./src/dance.ts";
 import { requestToken, URLAuthorizeRequest } from "./src/oauth2.ts";
 import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
 
@@ -46,7 +46,7 @@ router.get("/authme", (context) => {
 });
 
 router.get("/callback", async (ctx) => {
-  const response = processAuthorization(ctx.request.url, client.state);
+  const response = processAuthorizationResponse(ctx.request.url, client.state);
   console.log(`-> GET /callback, code : ${response?.code}, state: ${response?.state}`);
 
   if (response) {

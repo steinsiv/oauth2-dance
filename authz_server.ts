@@ -1,10 +1,11 @@
 // deno-lint-ignore-file
 import {
+  AccessTokenErrorResponseOptions,
   AccessTokenRequestOptions,
   AuthorizationRequestOptions,
   AuthorizationResponseOptions,
 } from "./src/protocol.ts";
-import { processAuthorization } from "./src/utils.ts";
+import { processAuthorizationResponse } from "./src/dance.ts";
 import { requestToken, URLAuthorizeRequest, URLAuthorizeResponse } from "./src/oauth2.ts";
 import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
 
@@ -107,8 +108,50 @@ router.post("/approve", async (ctx) => {
   }
 });
 
-router.get("/token", (cyx) => {
+// POST /token HTTP/1.1
+// Host: server.example.com
+// Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW
+// Content-Type: application/x-www-form-urlencoded
+
+// grant_type=authorization_code&code=SplxlOBeZQQYbYS6WxSbIA
+// &redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb
+
+router.post("/token", async (ctx) => {
   console.log(`-> GET /token`);
+
+  // Check Auth
+  const httpAuthentication = ctx.request.headers.get("Authorization");
+  const scheme = httpAuthentication ? atob(httpAuthentication).split(" ")[0] : null;
+  const creds = httpAuthentication ? atob(httpAuthentication).split(" ")[1] : null;
+  let authenticated = false;
+  if (httpAuthentication && creds !== null) {
+    const client = clients.find((c) => c.clientId === creds[0]);
+    authenticated = client && client.clientSecret !== creds[1] || false;
+    if (!authenticated) {
+      const errorOptions: AccessTokenErrorResponseOptions = {
+        error: "invalid_client",
+        error_description: "client authentication failed",
+        error_uri: "https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3",
+      };
+      ctx.response.status = 401;
+      ctx.response.headers.append("Content-Type", "application/json");
+      ctx.response.headers.append("WWW-Authenticate", scheme || "");
+      ctx.response.body = errorOptions;
+    }
+  }
+
+  if (ctx.request.hasBody) {
+    const body = ctx.request.body();
+
+    // IF not authenticated, check creds in body
+
+    if (body.type === "form") {
+      const params: URLSearchParams = await body.value;
+      const grantType = requestCache.find((n) => n.ident === params.get("grant_type"));
+      const code = requestCache.find((n) => n.ident === params.get("code"));
+      const redirectUri = requestCache.find((n) => n.ident === params.get("redirect_uri"));
+    }
+  }
 });
 
 app.use(router.routes());

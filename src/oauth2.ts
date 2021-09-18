@@ -4,7 +4,7 @@ import {
   AuthorizationRequestOptions,
   AuthorizationResponseOptions,
 } from "./protocol.ts";
-import { processTokenErrorResponse, processTokenResponse } from "./utils.ts";
+import { processTokenErrorResponse, processTokenResponse } from "./dance.ts";
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1
 export const URLAuthorizeRequest = (url: string, options: AuthorizationRequestOptions): string => {
@@ -45,6 +45,7 @@ export const URLTokenRequest = (url: string, options: AccessTokenRequestOptions)
   return result.toString();
 };
 
+// https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3
 export const requestToken = async (
   url: string,
   options: AccessTokenRequestOptions,
@@ -69,6 +70,5 @@ export const requestToken = async (
   if (response.status !== 200) {
     return processTokenErrorResponse(response);
   }
-
   return processTokenResponse(response);
 };
