@@ -1,40 +1,24 @@
 // deno-lint-ignore-file
-import {
-  AccessTokenErrorResponseOptions,
-  AccessTokenRequestOptions,
-  AuthorizationRequestOptions,
-  AuthorizationResponseOptions,
-} from "./src/protocol.ts";
-import { processAuthorizationResponse } from "./src/dance.ts";
-import { requestToken, URLAuthorizeRequest, URLAuthorizeResponse } from "./src/oauth2.ts";
+import { AuthorizationResponseOptions, OAuth2ClientOptions } from "./src/oauth2.types.ts";
 import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
-
+import { URLAuthorizeResponse } from "./src/dance.ts";
+import { processAccessTokenRequest, processClientAuthentication } from "./src/oauth2.ts";
 const router = new Router();
 const env = dotEnvConfig();
 console.log(dotEnvConfig({}));
 
-const app = new Application();
-app.use(async (ctx, next) => {
-  await next();
-  const rt = ctx.response.headers.get("X-Response-Time");
-  console.log(`${ctx.request.method} ${ctx.request.url} - ${rt}`);
-});
-const port = 9001;
 const sha256Hash = createHash("sha256");
 
 var codeCache: string[] = [];
 const requestCache: { ident: string; url: string }[] = [];
 
-var authServer = {
-  authorizationEndpoint: "http://localhost:9001/authorize",
-  tokenEndpoint: "http://localhost:9001/token",
-};
-
-const clients = [{
+const clients: OAuth2ClientOptions[] = [{
   clientId: env.DENO_CLIENT_ID,
   clientSecret: env.DENO_CLIENT_SECRET,
   redirectURIs: ["http://localhost:3000/callback", "btest"],
   scope: "foo bar",
+  state: "N/A",
+  code_verifier: "N/A",
 }];
 
 router.get("/authorize", (ctx) => {
@@ -45,7 +29,7 @@ router.get("/authorize", (ctx) => {
 
   // Check callback against client registered info
   const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri");
-  const callbackMatch = clients.map(({ redirectURIs }) => redirectURIs.some((uri) => uri === reqCallbackUrl)); // @TODO FEIL!!! Hent client først
+  const callbackMatch = clients.map(({ redirectURIs }) => redirectURIs.some((uri) => uri === reqCallbackUrl)); // @TODO: FEIL!!! Hent client først
   console.log(callbackMatch);
 
   // Store request until approval decision or TTL
@@ -108,54 +92,32 @@ router.post("/approve", async (ctx) => {
   }
 });
 
-// POST /token HTTP/1.1
-// Host: server.example.com
-// Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW
-// Content-Type: application/x-www-form-urlencoded
-
-// grant_type=authorization_code&code=SplxlOBeZQQYbYS6WxSbIA
-// &redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb
-
 router.post("/token", async (ctx) => {
   console.log(`-> GET /token`);
+  const clientAuthenticated = processClientAuthentication(ctx, clients);
+  if (clientAuthenticated && ctx.request.hasBody) {
+    const accessTokenRequest = await processAccessTokenRequest(ctx);
+    if (accessTokenRequest) {
+      //@todo: Check CODE match
+      //@todo: Check redirect_uri match
 
-  // Check Auth
-  const httpAuthentication = ctx.request.headers.get("Authorization");
-  const scheme = httpAuthentication ? atob(httpAuthentication).split(" ")[0] : null;
-  const creds = httpAuthentication ? atob(httpAuthentication).split(" ")[1] : null;
-  let authenticated = false;
-  if (httpAuthentication && creds !== null) {
-    const client = clients.find((c) => c.clientId === creds[0]);
-    authenticated = client && client.clientSecret !== creds[1] || false;
-    if (!authenticated) {
-      const errorOptions: AccessTokenErrorResponseOptions = {
-        error: "invalid_client",
-        error_description: "client authentication failed",
-        error_uri: "https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3",
-      };
-      ctx.response.status = 401;
-      ctx.response.headers.append("Content-Type", "application/json");
-      ctx.response.headers.append("WWW-Authenticate", scheme || "");
-      ctx.response.body = errorOptions;
-    }
-  }
+      // @todo: Check code_verifier against code_challenge match
+      // https://datatracker.ietf.org/doc/html/rfc7636#section-4.6
 
-  if (ctx.request.hasBody) {
-    const body = ctx.request.body();
-
-    // IF not authenticated, check creds in body
-
-    if (body.type === "form") {
-      const params: URLSearchParams = await body.value;
-      const grantType = requestCache.find((n) => n.ident === params.get("grant_type"));
-      const code = requestCache.find((n) => n.ident === params.get("code"));
-      const redirectUri = requestCache.find((n) => n.ident === params.get("redirect_uri"));
+      //@todo: DELIVER token back to client
     }
   }
 });
 
+const app = new Application();
+app.use(async (ctx, next) => {
+  await next();
+  console.log(`${ctx.request.method} ${ctx.request.url}`);
+});
+
+const port = 9001;
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-console.info(`CLIENT Listening on :${port}`);
+console.info(`AUTHORIZATION SERVER Listening on :${port}`);
 app.listen({ port: port });

@@ -1,46 +1,48 @@
 // deno-lint-ignore-file
-import { AccessTokenRequestOptions, AuthorizationRequestOptions } from "./src/protocol.ts";
-import { processAuthorizationResponse } from "./src/dance.ts";
-import { requestToken, URLAuthorizeRequest } from "./src/oauth2.ts";
+import {
+  AccessTokenRequestOptions,
+  AuthorizationRequestOptions,
+  AuthorizationServerOptions,
+  OAuth2ClientOptions,
+} from "./src/oauth2.types.ts";
 import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
+import { requestToken, URLAuthorizeRequest } from "./src/dance.ts";
+import { processAuthorizationResponse } from "./src/oauth2.ts";
 
-const router = new Router();
 const env = dotEnvConfig();
+//console.log(dotEnvConfig({}));
 
-console.log(dotEnvConfig({}));
+const authorizationServer: AuthorizationServerOptions = {
+  authorizationEndpoint: env.DENO_AUTHORIZE_URL,
+  tokenEndpoint: env.DENO_TOKEN_URL,
+};
 
-const app = new Application();
-const port = 3000;
-const hash = createHash("sha256");
-
-const client = {
-  authorizationURL: env.DENO_AUTHORIZE_URL,
-  tokenURL: env.DENO_TOKEN_URL,
+const client: OAuth2ClientOptions = {
   clientId: env.DENO_CLIENT_ID,
   clientSecret: env.DENO_CLIENT_SECRET,
-  redirectURL: env.DENO_CLIENT_REDIRECT_URL,
+  redirectURIs: [env.DENO_CLIENT_REDIRECT_URL],
   scope: "foo",
   state: cryptoRandomString({ length: 8, type: "url-safe" }),
   code_verifier: cryptoRandomString({ length: 32, type: "ascii-printable" }),
 };
 
-hash.update(client.code_verifier);
+const hash = createHash("sha256");
+client.code_verifier ? hash.update(client.code_verifier) : {}; // @TODO: Make PKCE mandatory
 
-const authzeOptions: AuthorizationRequestOptions = {
+const authorizeOptions: AuthorizationRequestOptions = {
   response_type: "code",
   client_id: client.clientId,
-  redirect_uri: client.redirectURL,
+  redirect_uri: client.redirectURIs[0],
   state: client.state,
   scope: client.scope,
   code_challenge: hash.toString("base64"),
   code_challenge_method: "S256",
 };
 
-console.log(client);
-console.log(authzeOptions);
+const router = new Router();
 
 router.get("/authme", (context) => {
-  const UrlAuthorize = URLAuthorizeRequest(client.authorizationURL, authzeOptions);
+  const UrlAuthorize = URLAuthorizeRequest(authorizationServer.authorizationEndpoint, authorizeOptions);
   console.log(`-> GET /authme ${UrlAuthorize}`);
   context.response.redirect(UrlAuthorize);
 });
@@ -53,12 +55,12 @@ router.get("/callback", async (ctx) => {
     const accessTokenOptions: AccessTokenRequestOptions = {
       grant_type: "authorization_code",
       code: response.code,
-      redirect_uri: client.redirectURL,
+      redirect_uri: client.redirectURIs[0],
       client_id: client.clientId,
       client_secret: client.clientSecret,
       code_verifier: client.code_verifier,
     };
-    const tokenResponse = await requestToken(client.tokenURL, accessTokenOptions);
+    const tokenResponse = await requestToken(authorizationServer.tokenEndpoint, accessTokenOptions);
     ctx.cookies.set("check", JSON.stringify(tokenResponse));
   }
   ctx.response.redirect(`/hooray`);
@@ -68,8 +70,11 @@ router.get("/hooray", (context) => {
   context.response.body = "You're in! Check your cookie";
 });
 
+const app = new Application();
+const port = 3000;
+
 app.use(router.routes());
 app.use(router.allowedMethods());
+app.listen({ port: port });
 
 console.info(`CLIENT Listening on :${port}`);
-app.listen({ port: port });

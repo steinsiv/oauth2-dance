@@ -1,3 +1,20 @@
+// @todo: should be oauth2.types.ts ?
+
+export type AuthorizationServerOptions = {
+  authorizationEndpoint: string;
+  tokenEndpoint: string;
+};
+
+// state and code_verifier (pkce) mandatory because why not
+export type OAuth2ClientOptions = {
+  clientId: string;
+  clientSecret: string;
+  redirectURIs: string[];
+  scope: string;
+  state: string;
+  code_verifier: string;
+};
+
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1
 export type AuthorizationRequestOptions = {
   response_type: "code";
@@ -17,12 +34,11 @@ export type AuthorizationResponseOptions = {
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3
 export type AccessTokenRequestOptions = {
-  client_authentication?: string; // Basic b64:b64
   grant_type: "authorization_code";
+  code: string;
+  redirect_uri: string;
   client_id: string;
   client_secret: string;
-  redirect_uri: string;
-  code: string;
   code_verifier: string; //PKCE rfc7636
 };
 
@@ -54,7 +70,7 @@ export type AuthorizationErrorResponseOptions = ErrorResponseOptions & {
 };
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-export type AccessTokenErrorResponseOptions = ErrorResponseOptions & {};
+export type AccessTokenErrorResponseOptions = ErrorResponseOptions;
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-6
 export type RefreshTokenRequestOptions = {
