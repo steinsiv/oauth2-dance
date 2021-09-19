@@ -1,8 +1,19 @@
 // deno-lint-ignore-file
-import { AuthorizationResponseOptions, OAuth2ClientOptions } from "./src/oauth2.types.ts";
+import {
+  AccessTokenErrorResponseOptions,
+  AuthorizationErrorResponseOptions,
+  AuthorizationResponseOptions,
+  OAuth2ClientOptions,
+} from "./src/oauth2.types.ts";
+import { URLAuthorizeResponse } from "./src/oauth2.ts";
+import {
+  checkValidScopes,
+  parseValidScopes,
+  processAccessTokenRequest,
+  processClientAuthentication,
+} from "./src/dance.server.ts";
 import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
-import { URLAuthorizeResponse } from "./src/dance.ts";
-import { processAccessTokenRequest, processClientAuthentication } from "./src/oauth2.ts";
+
 const router = new Router();
 const env = dotEnvConfig();
 console.log(dotEnvConfig({}));
@@ -55,57 +66,56 @@ router.get("/authorize", (ctx) => {
 
 router.post("/approve", async (ctx) => {
   console.log(`-> GET /token`);
-
-  if (ctx.request.hasBody) {
+  if (!ctx.request.hasBody || ctx.request.body().type !== "form") {
+    //Failfast
+    return;
+  } else {
     const body = ctx.request.body();
-    if (body.type === "form") {
-      const params: URLSearchParams = await body.value;
-      const query = requestCache.find((n) => n.ident === params.get("reqid")); // @TODO use this(!)
+    const params: URLSearchParams = await body.value;
 
-      // Check SCOPE https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1
-      const requestClientId = ctx.request.url.searchParams.get("client_id");
-      const requestScopes = ctx.request.url.searchParams.get("scope")?.split(" ");
-      const client = clients.find((c) => c.clientId === requestClientId);
-      const clientScopes = client?.scope.split(" ");
-      const validScopes = requestScopes?.filter((scope) => clientScopes?.includes(scope));
+    const query = requestCache.find((n) => n.ident === params.get("reqid")); // @TODO use this (!)
 
-      if (validScopes?.length === 0) {
-        ctx.response.body = "Err"; //@TODO
-        throw Error("`ERR -> No valid scope`"); //@TODO
-      }
+    const requestClientId = ctx.request.url.searchParams.get("client_id");
+    const client = clients.find((c) => c.clientId === requestClientId);
 
-      const code: string = cryptoRandomString({ length: 8, type: "url-safe" });
-      const state = ctx.request.url.searchParams.get("state");
-      const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri");
-
-      const responseOptions: AuthorizationResponseOptions = {
-        code: code,
-        state: state ?? undefined,
+    const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri"); // @TODO encapsulate this
+    if (!client || reqCallbackUrl === null || !(reqCallbackUrl in client.redirectURIs)) {
+      const err = !client ? "invalid_client" : "invalid_request";
+      ctx.response.status = 400;
+      const response: AuthorizationErrorResponseOptions = {
+        error: err,
+        error_description: "Invalid redirect URI or client_id",
+        error_uri: "https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1",
       };
-
-      if (reqCallbackUrl) {
-        const UrlAuthorize = URLAuthorizeResponse(reqCallbackUrl, responseOptions);
-        console.log(`-> REDIRECT to client GET ${UrlAuthorize}`);
-        ctx.response.redirect(UrlAuthorize);
-      } else throw Error("`ERR -> No callback url`"); //@TODO
+      ctx.response.body = response;
+      return;
     }
+
+    const validScopes = parseValidScopes(ctx, client);
+    const code: string = cryptoRandomString({ length: 8, type: "url-safe" });
+    codeCache.push(code);
+    const state = ctx.request.url.searchParams.get("state") || undefined;
+    const responseOptions: AuthorizationResponseOptions = { code: code, state: state };
+    const UrlAuthorize = URLAuthorizeResponse(reqCallbackUrl, responseOptions);
+    console.log(`-> REDIRECT to client GET ${UrlAuthorize}`);
+    ctx.response.redirect(UrlAuthorize);
   }
 });
 
 router.post("/token", async (ctx) => {
-  console.log(`-> GET /token`);
   const clientAuthenticated = processClientAuthentication(ctx, clients);
-  if (clientAuthenticated && ctx.request.hasBody) {
-    const accessTokenRequest = await processAccessTokenRequest(ctx);
-    if (accessTokenRequest) {
-      //@todo: Check CODE match
-      //@todo: Check redirect_uri match
+  if (!clientAuthenticated || !ctx.request.hasBody) return;
 
-      // @todo: Check code_verifier against code_challenge match
-      // https://datatracker.ietf.org/doc/html/rfc7636#section-4.6
+  const accessTokenRequest = await processAccessTokenRequest(ctx);
+  if (accessTokenRequest) {
+    // Burn code
+    //@todo: Check CODE match
+    //@todo: Check client redirect_uri match
 
-      //@todo: DELIVER token back to client
-    }
+    // @todo: Check code_verifier against code_challenge match
+    // https://datatracker.ietf.org/doc/html/rfc7636#section-4.6
+
+    //@todo: DELIVER token back to client
   }
 });
 

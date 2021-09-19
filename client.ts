@@ -6,8 +6,8 @@ import {
   OAuth2ClientOptions,
 } from "./src/oauth2.types.ts";
 import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
-import { requestToken, URLAuthorizeRequest } from "./src/dance.ts";
-import { processAuthorizationResponse } from "./src/oauth2.ts";
+import { URLAuthorizeRequest } from "./src/oauth2.ts";
+import { processAuthorizationResponse, requestToken } from "./src/dance.client.ts";
 
 const env = dotEnvConfig();
 //console.log(dotEnvConfig({}));
