@@ -54,6 +54,7 @@ export const requestToken = async (
   const formData: string[] = [];
   formData.push(`grant_type=${options.grant_type}`);
   formData.push(`code=${options.code}`);
+  formData.push(`client_id=${options.client_id}`);
   formData.push(`redirect_uri=${options.redirect_uri}`);
   formData.push(`code_verifier=${options.code_verifier}`);
 

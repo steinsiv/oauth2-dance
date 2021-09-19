@@ -1,17 +1,12 @@
 // deno-lint-ignore-file
 import {
-  AccessTokenErrorResponseOptions,
+  AccessTokenResponseOptions,
   AuthorizationErrorResponseOptions,
   AuthorizationResponseOptions,
   OAuth2ClientOptions,
 } from "./src/oauth2.types.ts";
 import { URLAuthorizeResponse } from "./src/oauth2.ts";
-import {
-  checkValidScopes,
-  parseValidScopes,
-  processAccessTokenRequest,
-  processClientAuthentication,
-} from "./src/dance.server.ts";
+import { parseValidScopes, processAccessTokenRequest, processClientAuthentication } from "./src/dance.server.ts";
 import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
 
 const router = new Router();
@@ -79,7 +74,7 @@ router.post("/approve", async (ctx) => {
     const client = clients.find((c) => c.clientId === requestClientId);
 
     const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri"); // @TODO encapsulate this
-    if (!client || reqCallbackUrl === null || !(reqCallbackUrl in client.redirectURIs)) {
+    if (reqCallbackUrl === null || !client?.redirectURIs.includes(reqCallbackUrl)) {
       const err = !client ? "invalid_client" : "invalid_request";
       ctx.response.status = 400;
       const response: AuthorizationErrorResponseOptions = {
@@ -106,16 +101,25 @@ router.post("/token", async (ctx) => {
   const clientAuthenticated = processClientAuthentication(ctx, clients);
   if (!clientAuthenticated || !ctx.request.hasBody) return;
 
-  const accessTokenRequest = await processAccessTokenRequest(ctx);
-  if (accessTokenRequest) {
+  const accessTokenOptions = await processAccessTokenRequest(ctx);
+  if (accessTokenOptions) {
     // Burn code
     //@todo: Check CODE match
     //@todo: Check client redirect_uri match
 
     // @todo: Check code_verifier against code_challenge match
     // https://datatracker.ietf.org/doc/html/rfc7636#section-4.6
+    // CREATE new token
+    const accessToken: AccessTokenResponseOptions = {
+      access_token: cryptoRandomString({ length: 24, type: "alphanumeric" }),
+      token_type: "Bearer",
+      expires_in: 3600,
+      refresh_token: cryptoRandomString({ length: 24, type: "alphanumeric" }),
+    };
 
-    //@todo: DELIVER token back to client
+    ctx.response.status = 200;
+    ctx.response.headers.append("Content-Type", "application/json");
+    ctx.response.body = accessToken;
   }
 });
 

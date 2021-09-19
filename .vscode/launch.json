@@ -24,7 +24,7 @@
       "name": "Deno: Run AuthorizationServer",
       "request": "launch",
       "type": "pwa-node",
-      "program": "authz_server.ts",
+      "program": "authorization_server.ts",
       "cwd": "${workspaceFolder}",
       "runtimeExecutable": "deno",
       "runtimeArgs": [
