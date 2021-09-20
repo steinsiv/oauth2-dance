@@ -1,23 +1,25 @@
-// deno-lint-ignore-file
 import {
   AccessTokenErrorResponseOptions,
   AccessTokenResponseOptions,
   AuthorizationErrorResponseOptions,
+  AuthorizationRequestOptions,
   AuthorizationResponseOptions,
   OAuth2ClientOptions,
 } from "./src/oauth2.types.ts";
 import { URLAuthorizeResponse } from "./src/oauth2.ts";
 import { parseValidScopes, processAccessTokenRequest, processClientAuthentication } from "./src/dance.server.ts";
-import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
+import { Application, Context, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
+
+// @todo: /revoke
+// @todo: /introspect
+// @todo: /refreshtoken
 
 const router = new Router();
 const env = dotEnvConfig();
 console.log(dotEnvConfig({}));
 
-const codeCache: Map<string, OAuth2ClientOptions> = new Map();
-
-//var codeCache: string[] = [];
-const requestCache: { ident: string; url: string }[] = [];
+const codeCache: Map<string, AuthorizationRequestOptions> = new Map();
+const requestCache: { ident: string; req: AuthorizationRequestOptions }[] = [];
 
 const clients: OAuth2ClientOptions[] = [{
   clientId: env.DENO_CLIENT_ID,
@@ -29,22 +31,64 @@ const clients: OAuth2ClientOptions[] = [{
   codeChallenge: "N/A",
 }];
 
+const informResourceOwner = (ctx: Context, error: AuthorizationErrorResponseOptions) => {
+  ctx.response.status = 400;
+  ctx.response.headers.append("Content-Type", "application/json");
+  ctx.response.body = error;
+};
+
+const informClient = (ctx: Context, error: AccessTokenErrorResponseOptions) => {
+  ctx.response.status = 400;
+  ctx.response.headers.append("Content-Type", "application/json");
+  ctx.response.body = error;
+};
+
 router.get("/authorize", (ctx) => {
   console.log(`-> GET /authorize`);
+  let error: AuthorizationErrorResponseOptions | undefined;
   const reqClientId = ctx.request.url.searchParams.get("client_id");
   const client = clients.find((c) => c["clientId"] === reqClientId);
-  console.log(client);
+  if (!reqClientId || !client) {
+    informResourceOwner(ctx, { error: "invalid_client" });
+    return;
+  }
+  const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri") || "N/A";
+  const isCallbackOk = client?.clientRedirectURIs.includes(reqCallbackUrl);
+  if (!reqCallbackUrl || !isCallbackOk) {
+    error = { error: "invalid_request", error_description: "Invalid callback" };
+    informResourceOwner(ctx, error);
+    return;
+  }
 
-  // Check callback against client registered info
-  const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri");
-  const callbackMatch = clients.map(({ clientRedirectURIs }) =>
-    clientRedirectURIs.some((uri) => uri === reqCallbackUrl)
-  ); // @TODO: FEIL!!! Hent client først
-  console.log(callbackMatch);
+  const reqState = ctx.request.url.searchParams.get("state");
+  if (!reqState) {
+    error = { error: "invalid_request", error_description: "Missing state parameter" };
+    informResourceOwner(ctx, error);
+    return;
+  }
+
+  const reqChallenge = ctx.request.url.searchParams.get("code_challenge");
+  const reqChallengeMethod = ctx.request.url.searchParams.get("code_challenge_method");
+  if (!reqChallenge || !reqChallengeMethod) {
+    error = { error: "invalid_request", error_description: "Missing PKCE parameters" };
+    informResourceOwner(ctx, error);
+    return;
+  }
+
+  const validScopes = parseValidScopes(ctx, client);
+  const authorizeRequest: AuthorizationRequestOptions = {
+    clientId: reqClientId,
+    state: reqState,
+    scope: validScopes,
+    codeChallenge: reqChallenge,
+    responseType: "code",
+    redirectURI: reqCallbackUrl,
+    codeChallengeMethod: "S256",
+  };
 
   // Store request until approval decision or TTL
   const requestIdentifier: string = cryptoRandomString({ length: 12, type: "alphanumeric" });
-  requestCache.push({ ident: requestIdentifier, url: ctx.request.url.toString() });
+  requestCache.push({ ident: requestIdentifier, req: authorizeRequest });
 
   //const html = await serveFile(req, "index.html"); @TODO
 
@@ -52,9 +96,9 @@ router.get("/authorize", (ctx) => {
     <html>
       <body>
         <h1>Authorize this?</h1>
-        <form  method="post" action="${ctx.request.url.toString().replace("authorize", "approve")}">
+        <form  method="post" action="${ctx.request.url.origin}/approve">
         <input type="hidden" name="reqid" value="${requestIdentifier}">
-        <p>${ctx.request.url.toString()}</p>
+        <p>${ctx.request.url.search}</p>
         <input type="submit" target="top" value="Sure!"></input>
         </form>
       </body>
@@ -66,7 +110,6 @@ router.get("/authorize", (ctx) => {
 router.post("/approve", async (ctx) => {
   console.log(`-> GET /token`);
   if (!ctx.request.hasBody || ctx.request.body().type !== "form") {
-    //Failfast
     return;
   } else {
     const body = ctx.request.body();
@@ -74,34 +117,17 @@ router.post("/approve", async (ctx) => {
 
     const query = requestCache.find((n) => n.ident === params.get("reqid")); // @TODO use this (!)
 
-    const requestClientId = ctx.request.url.searchParams.get("client_id");
-    const client = clients.find((c) => c.clientId === requestClientId);
+    if (query) {
+      const code: string = cryptoRandomString({ length: 12, type: "url-safe" });
+      const state = query.req.state;
+      const responseOptions: AuthorizationResponseOptions = { code: code, state: state };
+      const UrlAuthorize = URLAuthorizeResponse(query.req.redirectURI, responseOptions);
 
-    const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri"); // @TODO encapsulate this
-    if (reqCallbackUrl === null || !client?.clientRedirectURIs.includes(reqCallbackUrl)) {
-      const err = !client ? "invalid_client" : "invalid_request";
-      ctx.response.status = 400;
-      const response: AuthorizationErrorResponseOptions = {
-        error: err,
-        error_description: "Invalid redirect URI or client_id",
-        error_uri: "https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1",
-      };
-      ctx.response.body = response;
-      return;
+      codeCache.set(code, query.req);
+
+      console.log(`-> GET REDIRECT to client ${UrlAuthorize}`);
+      ctx.response.redirect(UrlAuthorize);
     }
-
-    const validScopes = parseValidScopes(ctx, client); //@todo
-    const code: string = cryptoRandomString({ length: 12, type: "url-safe" });
-
-    const state = ctx.request.url.searchParams.get("state") || undefined;
-    const responseOptions: AuthorizationResponseOptions = { code: code, state: state };
-    const UrlAuthorize = URLAuthorizeResponse(reqCallbackUrl, responseOptions);
-    client.state = state;
-    client.codeChallenge = ctx.request.url.searchParams.get("code_challenge") || "N/A";
-    codeCache.set(code, client);
-
-    console.log(`-> REDIRECT to client GET ${UrlAuthorize}`);
-    ctx.response.redirect(UrlAuthorize);
   }
 });
 
@@ -110,16 +136,30 @@ router.post("/token", async (ctx) => {
   if (!clientAuthenticated || !ctx.request.hasBody) return;
 
   const requestOptions = await processAccessTokenRequest(ctx);
+
+  // @todo: Check for double error checking in processAccessTokenRequest
+  const grantType = requestOptions?.grantType;
+  if (grantType !== "authorization_code") {
+    informClient(ctx, { error: "unsupported_grant_type" });
+    return;
+  }
+  const clientCode = requestOptions?.code;
+  const clientCodeRequest = clientCode ? codeCache.get(clientCode) : null;
+  if (!clientCode || !clientCodeRequest) {
+    informClient(ctx, { error: "invalid_grant" });
+    return;
+  }
+
   const sha256Hash = createHash("sha256");
   // Check redirectURI, ownership of code, and verify PKCE code_challenge
   if (
-    requestOptions &&
+    requestOptions && requestOptions.codeVerifier &&
     codeCache.get(requestOptions.code) &&
     (codeCache.get(requestOptions.code)?.clientId === clientAuthenticated.clientId) &&
     clientAuthenticated.clientRedirectURIs.includes(requestOptions.redirectURI) &&
-    sha256Hash.update(requestOptions.codeVerifier).toString("base64") === clientAuthenticated.codeChallenge
+    sha256Hash.update(requestOptions.codeVerifier).toString("base64") === clientCodeRequest.codeChallenge
   ) {
-    requestOptions ? codeCache.delete(requestOptions.code) : {}; // burn code
+    requestOptions ? codeCache.delete(requestOptions.code) : {}; // 🔥 burn code
 
     // Issue token
     const accessToken: AccessTokenResponseOptions = {

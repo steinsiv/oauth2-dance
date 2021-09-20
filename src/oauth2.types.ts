@@ -4,19 +4,15 @@ export type OAuth2Options = {
   authorizationEndpoint: string;
   tokenEndpoint: string;
   redirectURI: string;
-  access_token: string;
-  token_type: string | "Bearer";
-  expires_in?: number;
-  refresh_token?: string;
   clientId: string;
   clientSecret?: string;
   clientRedirectURIs: string[];
   scope: string;
-  state?: string;
+  state: string;
   code: string;
   codeVerifier: string;
   codeChallenge: string;
-  codeChallengeMethod: string;
+  codeChallengeMethod: "S256";
 };
 
 export type AuthorizationServerOptions = Pick<OAuth2Options, "authorizationEndpoint" | "tokenEndpoint">;
@@ -44,10 +40,12 @@ export type AccessTokenRequestOptions = Pick<
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.4
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.1
-export type AccessTokenResponseOptions = Pick<
-  OAuth2Options,
-  "access_token" | "token_type" | "expires_in" | "refresh_token"
->;
+export type AccessTokenResponseOptions = {
+  access_token: string;
+  token_type: string | "Bearer";
+  expires_in?: number;
+  refresh_token?: string;
+};
 
 export type errorType =
   | "invalid_request"

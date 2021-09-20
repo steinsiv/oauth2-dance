@@ -91,9 +91,8 @@ const processClientAuthenticationError = (ctx: Context, scheme: string | null) =
   ctx.response.body = errorOptions;
 };
 
-// @todo: remove dependency to OAK
 // https://datatracker.ietf.org/doc/html/rfc6749#section-3.3
-export const parseValidScopes = (ctx: Context, client: OAuth2ClientOptions): string[] => {
+export const parseValidScopes = (ctx: Context, client: OAuth2ClientOptions): string => {
   const requestScopes = ctx.request.url.searchParams.get("scope")?.split(" ");
 
   const clientScopes = client?.scope.split(" ");
@@ -103,11 +102,10 @@ export const parseValidScopes = (ctx: Context, client: OAuth2ClientOptions): str
     const res: AuthorizationErrorResponseOptions = {
       error: "invalid_scope",
       error_description: undefined,
-      error_uri: "https://datatracker.ietf.org/doc/html/rfc6749#section-3.3",
     };
     const redirectError = URLAuthorizationErrorResponse(client.clientRedirectURIs[0], res);
     ctx.response.redirect(redirectError);
     console.error(`${res}`);
   }
-  return validScopes || [];
+  return validScopes?.join(" ") || "";
 };
