@@ -54,11 +54,11 @@ export const processAccessTokenRequest = async (ctx: Context): Promise<AccessTok
       processAccessTokenRequestError(ctx, grantType);
     } else {
       const accessTokenRequest: AccessTokenRequestOptions = {
-        grant_type: grantType,
+        grantType: grantType,
         code: authorizationCode,
-        redirect_uri: redirect,
-        client_id: clientId,
-        code_verifier: codeVerifier,
+        redirectURI: redirect,
+        clientId: clientId,
+        codeVerifier: codeVerifier,
       };
       return accessTokenRequest;
     }
@@ -105,7 +105,7 @@ export const parseValidScopes = (ctx: Context, client: OAuth2ClientOptions): str
       error_description: undefined,
       error_uri: "https://datatracker.ietf.org/doc/html/rfc6749#section-3.3",
     };
-    const redirectError = URLAuthorizationErrorResponse(client.redirectURIs[0], res);
+    const redirectError = URLAuthorizationErrorResponse(client.clientRedirectURIs[0], res);
     ctx.response.redirect(redirectError);
     console.error(`${res}`);
   }

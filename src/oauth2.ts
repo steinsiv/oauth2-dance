@@ -8,17 +8,17 @@ import {
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1
 export const URLAuthorizeRequest = (url: string, options: AuthorizationRequestOptions): string => {
   const result = new URL(url);
-  result.searchParams.append("response_type", options.response_type);
-  result.searchParams.append("client_id", options.client_id);
-  result.searchParams.append("redirect_uri", options.redirect_uri);
+  result.searchParams.append("response_type", options.responseType);
+  result.searchParams.append("client_id", options.clientId);
+  result.searchParams.append("redirect_uri", options.redirectURI);
   if (options.state) {
     result.searchParams.append("state", options.state);
   }
   result.searchParams.append("scope", options.scope);
-  result.searchParams.append("code_challenge", options.code_challenge);
+  result.searchParams.append("code_challenge", options.codeChallenge);
   result.searchParams.append(
     "code_challenge_method",
-    options.code_challenge_method,
+    options.codeChallengeMethod,
   );
   return result.toString();
 };
@@ -36,11 +36,11 @@ export const URLAuthorizeResponse = (url: string, options: AuthorizationResponse
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3
 export const URLTokenRequest = (url: string, options: AccessTokenRequestOptions): string => {
   const result = new URL(url);
-  result.searchParams.append("grant_type", options.grant_type);
-  result.searchParams.append("client_id", options.client_id);
-  result.searchParams.append("redirect_uri", options.redirect_uri);
+  result.searchParams.append("grant_type", options.grantType);
+  result.searchParams.append("client_id", options.clientId);
+  result.searchParams.append("redirect_uri", options.redirectURI);
   result.searchParams.append("code", options.code);
-  result.searchParams.append("code_verifier", options.code_verifier);
+  result.searchParams.append("code_verifier", options.codeVerifier);
   return result.toString();
 };
 

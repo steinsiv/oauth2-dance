@@ -1,65 +1,65 @@
-// @todo: should be oauth2.types.ts ?
-
-export type AuthorizationServerOptions = {
+export type OAuth2Options = {
+  grantType: "authorization_code";
+  responseType: "code";
   authorizationEndpoint: string;
   tokenEndpoint: string;
+  redirectURI: string;
+  access_token: string;
+  token_type: string | "Bearer";
+  expires_in?: number;
+  refresh_token?: string;
+  clientId: string;
+  clientSecret?: string;
+  clientRedirectURIs: string[];
+  scope: string;
+  state?: string;
+  code: string;
+  codeVerifier: string;
+  codeChallenge: string;
+  codeChallengeMethod: string;
 };
+
+export type AuthorizationServerOptions = Pick<OAuth2Options, "authorizationEndpoint" | "tokenEndpoint">;
 
 // state and code_verifier (pkce) mandatory because why not
-export type OAuth2ClientOptions = {
-  clientId: string;
-  clientSecret: string;
-  redirectURIs: string[];
-  scope: string;
-  state: string;
-  code_verifier: string;
-};
+export type OAuth2ClientOptions = Pick<
+  OAuth2Options,
+  "clientId" | "clientSecret" | "clientRedirectURIs" | "scope" | "state" | "codeChallenge" | "codeVerifier"
+>;
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1
-export type AuthorizationRequestOptions = {
-  response_type: "code";
-  client_id: string;
-  redirect_uri: string;
-  state?: string;
-  scope: string;
-  code_challenge: string;
-  code_challenge_method: string;
-};
+export type AuthorizationRequestOptions = Pick<
+  OAuth2Options,
+  "responseType" | "clientId" | "redirectURI" | "scope" | "state" | "codeChallenge" | "codeChallengeMethod"
+>;
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
-export type AuthorizationResponseOptions = {
-  code: string;
-  state?: string;
-};
+export type AuthorizationResponseOptions = Pick<OAuth2Options, "code" | "state">;
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3
-export type AccessTokenRequestOptions = {
-  grant_type: "authorization_code";
-  code: string;
-  redirect_uri: string;
-  client_id: string;
-  client_secret?: string;
-  code_verifier: string; //PKCE rfc7636
-};
+export type AccessTokenRequestOptions = Pick<
+  OAuth2Options,
+  "grantType" | "code" | "redirectURI" | "clientId" | "clientSecret" | "codeVerifier"
+>;
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.4
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.1
-export type AccessTokenResponseOptions = {
-  access_token: string;
-  token_type: string;
-  expires_in?: number;
-  refresh_token?: string;
-};
+export type AccessTokenResponseOptions = Pick<
+  OAuth2Options,
+  "access_token" | "token_type" | "expires_in" | "refresh_token"
+>;
+
+export type errorType =
+  | "invalid_request"
+  | "invalid_client"
+  | "invalid_grant"
+  | "unauthorized_client"
+  | "unsupported_grant_type"
+  | "invalid_scope";
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 export type ErrorResponseOptions = {
-  error:
-    | "invalid_request"
-    | "invalid_client"
-    | "invalid_grant"
-    | "unauthorized_client"
-    | "unsupported_grant_type"
-    | "invalid_scope";
+  error: errorType;
   error_description?: string;
   error_uri?: string;
 };

@@ -1,5 +1,6 @@
 // deno-lint-ignore-file
 import {
+  AccessTokenErrorResponseOptions,
   AccessTokenResponseOptions,
   AuthorizationErrorResponseOptions,
   AuthorizationResponseOptions,
@@ -13,18 +14,19 @@ const router = new Router();
 const env = dotEnvConfig();
 console.log(dotEnvConfig({}));
 
-const sha256Hash = createHash("sha256");
+const codeCache: Map<string, OAuth2ClientOptions> = new Map();
 
-var codeCache: string[] = [];
+//var codeCache: string[] = [];
 const requestCache: { ident: string; url: string }[] = [];
 
 const clients: OAuth2ClientOptions[] = [{
   clientId: env.DENO_CLIENT_ID,
   clientSecret: env.DENO_CLIENT_SECRET,
-  redirectURIs: ["http://localhost:3000/callback", "btest"],
+  clientRedirectURIs: ["http://localhost:3000/callback", "btest"],
   scope: "foo bar",
   state: "N/A",
-  code_verifier: "N/A",
+  codeVerifier: "N/A",
+  codeChallenge: "N/A",
 }];
 
 router.get("/authorize", (ctx) => {
@@ -35,7 +37,9 @@ router.get("/authorize", (ctx) => {
 
   // Check callback against client registered info
   const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri");
-  const callbackMatch = clients.map(({ redirectURIs }) => redirectURIs.some((uri) => uri === reqCallbackUrl)); // @TODO: FEIL!!! Hent client først
+  const callbackMatch = clients.map(({ clientRedirectURIs }) =>
+    clientRedirectURIs.some((uri) => uri === reqCallbackUrl)
+  ); // @TODO: FEIL!!! Hent client først
   console.log(callbackMatch);
 
   // Store request until approval decision or TTL
@@ -74,7 +78,7 @@ router.post("/approve", async (ctx) => {
     const client = clients.find((c) => c.clientId === requestClientId);
 
     const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri"); // @TODO encapsulate this
-    if (reqCallbackUrl === null || !client?.redirectURIs.includes(reqCallbackUrl)) {
+    if (reqCallbackUrl === null || !client?.clientRedirectURIs.includes(reqCallbackUrl)) {
       const err = !client ? "invalid_client" : "invalid_request";
       ctx.response.status = 400;
       const response: AuthorizationErrorResponseOptions = {
@@ -86,30 +90,38 @@ router.post("/approve", async (ctx) => {
       return;
     }
 
-    const validScopes = parseValidScopes(ctx, client);
-    const code: string = cryptoRandomString({ length: 8, type: "url-safe" });
-    codeCache.push(code);
+    const validScopes = parseValidScopes(ctx, client); //@todo
+    const code: string = cryptoRandomString({ length: 12, type: "url-safe" });
+
     const state = ctx.request.url.searchParams.get("state") || undefined;
     const responseOptions: AuthorizationResponseOptions = { code: code, state: state };
     const UrlAuthorize = URLAuthorizeResponse(reqCallbackUrl, responseOptions);
+    client.state = state;
+    client.codeChallenge = ctx.request.url.searchParams.get("code_challenge") || "N/A";
+    codeCache.set(code, client);
+
     console.log(`-> REDIRECT to client GET ${UrlAuthorize}`);
     ctx.response.redirect(UrlAuthorize);
   }
 });
 
 router.post("/token", async (ctx) => {
-  const clientAuthenticated = processClientAuthentication(ctx, clients);
+  const clientAuthenticated = await processClientAuthentication(ctx, clients);
   if (!clientAuthenticated || !ctx.request.hasBody) return;
 
-  const accessTokenOptions = await processAccessTokenRequest(ctx);
-  if (accessTokenOptions) {
-    // Burn code
-    //@todo: Check CODE match
-    //@todo: Check client redirect_uri match
+  const requestOptions = await processAccessTokenRequest(ctx);
+  const sha256Hash = createHash("sha256");
+  // Check redirectURI, ownership of code, and verify PKCE code_challenge
+  if (
+    requestOptions &&
+    codeCache.get(requestOptions.code) &&
+    (codeCache.get(requestOptions.code)?.clientId === clientAuthenticated.clientId) &&
+    clientAuthenticated.clientRedirectURIs.includes(requestOptions.redirectURI) &&
+    sha256Hash.update(requestOptions.codeVerifier).toString("base64") === clientAuthenticated.codeChallenge
+  ) {
+    requestOptions ? codeCache.delete(requestOptions.code) : {}; // burn code
 
-    // @todo: Check code_verifier against code_challenge match
-    // https://datatracker.ietf.org/doc/html/rfc7636#section-4.6
-    // CREATE new token
+    // Issue token
     const accessToken: AccessTokenResponseOptions = {
       access_token: cryptoRandomString({ length: 24, type: "alphanumeric" }),
       token_type: "Bearer",
@@ -120,6 +132,10 @@ router.post("/token", async (ctx) => {
     ctx.response.status = 200;
     ctx.response.headers.append("Content-Type", "application/json");
     ctx.response.body = accessToken;
+  } else {
+    ctx.response.status = 400;
+    ctx.response.headers.append("Content-Type", "application/json");
+    ctx.response.body = { error: "invalid_request" };
   }
 });
 

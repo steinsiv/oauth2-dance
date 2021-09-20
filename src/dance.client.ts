@@ -5,6 +5,7 @@ import {
   AuthorizationErrorResponseOptions,
   AuthorizationRequestOptions,
   AuthorizationResponseOptions,
+  errorType,
 } from "./oauth2.types.ts";
 
 export const processAuthorizationRequest = (): AuthorizationRequestOptions | null => {
@@ -16,7 +17,7 @@ export const processAuthorizationRequest = (): AuthorizationRequestOptions | nul
 export const processAuthorizeErrorResponse = (redirectionURI: URL) => {
   const parameters = redirectionURI.searchParams;
   const res: AuthorizationErrorResponseOptions = {
-    error: parameters.get("error") as any,
+    error: parameters.get("error") as errorType | "invalid_request",
     error_description: parameters.get("error_description") ?? undefined,
     error_uri: parameters.get("error_uri") ?? undefined,
   };
@@ -29,7 +30,7 @@ export const processAuthorizeErrorResponse = (redirectionURI: URL) => {
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
 export const processAuthorizationResponse = (
   redirectionURI: URL,
-  state: string,
+  state?: string,
 ): AuthorizationResponseOptions | null => {
   const parameters = redirectionURI.searchParams;
   if (parameters.get("error") !== null) return processAuthorizeErrorResponse(redirectionURI);
@@ -50,13 +51,13 @@ export const requestToken = async (
   url: string,
   options: AccessTokenRequestOptions,
 ): Promise<AccessTokenResponseOptions | null> => {
-  const creds = options.client_id + ":" + options.client_secret;
+  const creds = options.clientId + ":" + options.clientSecret;
   const formData: string[] = [];
-  formData.push(`grant_type=${options.grant_type}`);
+  formData.push(`grant_type=${options.grantType}`);
   formData.push(`code=${options.code}`);
-  formData.push(`client_id=${options.client_id}`);
-  formData.push(`redirect_uri=${options.redirect_uri}`);
-  formData.push(`code_verifier=${options.code_verifier}`);
+  formData.push(`client_id=${options.clientId}`);
+  formData.push(`redirect_uri=${options.redirectURI}`);
+  formData.push(`code_verifier=${options.codeVerifier}`);
 
   const request = new Request(url, {
     method: "POST",

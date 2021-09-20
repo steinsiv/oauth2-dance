@@ -20,23 +20,25 @@ const authorizationServer: AuthorizationServerOptions = {
 const client: OAuth2ClientOptions = {
   clientId: env.DENO_CLIENT_ID,
   clientSecret: env.DENO_CLIENT_SECRET,
-  redirectURIs: [env.DENO_CLIENT_REDIRECT_URL],
+  clientRedirectURIs: [env.DENO_CLIENT_REDIRECT_URL],
   scope: "foo",
   state: cryptoRandomString({ length: 8, type: "url-safe" }),
-  code_verifier: cryptoRandomString({ length: 32, type: "ascii-printable" }),
+  codeVerifier: "N/A",
+  codeChallenge: "N/A",
 };
 
-const hash = createHash("sha256");
-client.code_verifier ? hash.update(client.code_verifier) : {}; // @TODO: Make PKCE mandatory
+//client.codeVerifier = cryptoRandomString({ length: 32, type: "alphanumeric" });
+client.codeVerifier = "AuthorizationServerOptionsAuthorizationServerOptionsAuthorizationServerOptions";
+client.codeChallenge = createHash("sha256").update(client.codeVerifier).toString("base64");
 
 const authorizeOptions: AuthorizationRequestOptions = {
-  response_type: "code",
-  client_id: client.clientId,
-  redirect_uri: client.redirectURIs[0],
+  responseType: "code",
+  clientId: client.clientId,
+  redirectURI: client.clientRedirectURIs[0],
   state: client.state,
   scope: client.scope,
-  code_challenge: hash.toString("base64"),
-  code_challenge_method: "S256",
+  codeChallenge: client.codeChallenge,
+  codeChallengeMethod: "S256",
 };
 
 const router = new Router();
@@ -53,12 +55,12 @@ router.get("/callback", async (ctx) => {
 
   if (response) {
     const accessTokenOptions: AccessTokenRequestOptions = {
-      grant_type: "authorization_code",
+      grantType: "authorization_code",
       code: response.code,
-      redirect_uri: client.redirectURIs[0],
-      client_id: client.clientId,
-      client_secret: client.clientSecret,
-      code_verifier: client.code_verifier,
+      redirectURI: client.clientRedirectURIs[0],
+      clientId: client.clientId,
+      clientSecret: client.clientSecret,
+      codeVerifier: client.codeVerifier,
     };
     const tokenResponse = await requestToken(authorizationServer.tokenEndpoint, accessTokenOptions);
     ctx.cookies.set("check", JSON.stringify(tokenResponse));
