@@ -15,7 +15,9 @@ export const processClientAuthentication = async (
 ): Promise<OAuth2ClientOptions | null> => {
   const httpAuthentication = ctx.request.headers.get("Authorization");
   const scheme = httpAuthentication ? httpAuthentication.split(" ")[0] : null;
-  const creds = httpAuthentication ? atob(httpAuthentication.split(" ")[1]).split(":") : null;
+  const creds = httpAuthentication
+    ? atob(httpAuthentication.split(" ")[1]).split(":")
+    : null;
   if (httpAuthentication && scheme && creds) {
     const client = clients.find((c) => c.clientId === creds[0]);
     const credsOk = client && client.clientSecret === creds[1] || false;
@@ -29,8 +31,11 @@ export const processClientAuthentication = async (
     const body = ctx.request.body();
     if (body.type === "form") {
       const params: URLSearchParams = await body.value;
-      const client = clients.find((c) => c.clientId === params.get("client_id"));
-      const credsOk = client && client.clientSecret === params.get("client_secret") || false;
+      const client = clients.find((c) =>
+        c.clientId === params.get("client_id")
+      );
+      const credsOk =
+        client && client.clientSecret === params.get("client_secret") || false;
       if (client && credsOk) {
         return client;
       } else {
@@ -41,7 +46,9 @@ export const processClientAuthentication = async (
   return null;
 };
 
-export const processAccessTokenRequest = async (ctx: Context): Promise<AccessTokenRequestOptions | null> => {
+export const processAccessTokenRequest = async (
+  ctx: Context,
+): Promise<AccessTokenRequestOptions | null> => {
   const body = ctx.request.body();
   if (body.type === "form") {
     const params: URLSearchParams = await body.value;
@@ -50,7 +57,10 @@ export const processAccessTokenRequest = async (ctx: Context): Promise<AccessTok
     const redirect = params.get("redirect_uri");
     const clientId = params.get("client_id");
     const codeVerifier = params.get("code_verifier");
-    if (grantType !== "authorization_code" || !authorizationCode || !redirect || !clientId || !codeVerifier) {
+    if (
+      grantType !== "authorization_code" || !authorizationCode || !redirect ||
+      !clientId || !codeVerifier
+    ) {
       processAccessTokenRequestError(ctx, grantType);
     } else {
       const accessTokenRequest: AccessTokenRequestOptions = {
@@ -66,8 +76,13 @@ export const processAccessTokenRequest = async (ctx: Context): Promise<AccessTok
   return null;
 };
 
-const processAccessTokenRequestError = (ctx: Context, grantType: string | null) => {
-  const error = grantType === "authorization_code" ? "invalid_request" : "unsupported_grant_type";
+const processAccessTokenRequestError = (
+  ctx: Context,
+  grantType: string | null,
+) => {
+  const error = grantType === "authorization_code"
+    ? "invalid_request"
+    : "unsupported_grant_type";
   const errorOptions: AccessTokenErrorResponseOptions = {
     error: error,
     error_uri: "https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3",
@@ -77,7 +92,10 @@ const processAccessTokenRequestError = (ctx: Context, grantType: string | null) 
   ctx.response.body = errorOptions;
 };
 
-const processClientAuthenticationError = (ctx: Context, scheme: string | null) => {
+const processClientAuthenticationError = (
+  ctx: Context,
+  scheme: string | null,
+) => {
   const errorOptions: AccessTokenErrorResponseOptions = {
     error: "invalid_client",
     error_description: "client authentication failed",
@@ -92,18 +110,26 @@ const processClientAuthenticationError = (ctx: Context, scheme: string | null) =
 };
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-3.3
-export const parseValidScopes = (ctx: Context, client: OAuth2ClientOptions): string => {
+export const parseValidScopes = (
+  ctx: Context,
+  client: OAuth2ClientOptions,
+): string => {
   const requestScopes = ctx.request.url.searchParams.get("scope")?.split(" ");
 
   const clientScopes = client?.scope.split(" ");
-  const validScopes = requestScopes?.filter((scope) => clientScopes?.includes(scope));
+  const validScopes = requestScopes?.filter((scope) =>
+    clientScopes?.includes(scope)
+  );
 
   if (validScopes?.length === 0 && client) {
     const res: AuthorizationErrorResponseOptions = {
       error: "invalid_scope",
       error_description: undefined,
     };
-    const redirectError = URLAuthorizationErrorResponse(client.clientRedirectURIs[0], res);
+    const redirectError = URLAuthorizationErrorResponse(
+      client.clientRedirectURIs[0],
+      res,
+    );
     ctx.response.redirect(redirectError);
     console.error(`${res}`);
   }

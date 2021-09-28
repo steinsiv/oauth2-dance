@@ -8,7 +8,9 @@ import {
   errorType,
 } from "./oauth2.types.ts";
 
-export const processAuthorizationRequest = (): AuthorizationRequestOptions | null => {
+export const processAuthorizationRequest = ():
+  | AuthorizationRequestOptions
+  | null => {
   return null;
 };
 
@@ -33,9 +35,13 @@ export const processAuthorizationResponse = (
   state?: string,
 ): AuthorizationResponseOptions | null => {
   const parameters = redirectionURI.searchParams;
-  if (parameters.get("error") !== null) return processAuthorizeErrorResponse(redirectionURI);
+  if (parameters.get("error") !== null) {
+    return processAuthorizeErrorResponse(redirectionURI);
+  }
   if (state && !parameters.has("state") && parameters.get("state") !== state) {
-    console.error(`ERROR: state needs to be included in response and match ${state}.`);
+    console.error(
+      `ERROR: state needs to be included in response and match ${state}.`,
+    );
   }
   if (!parameters.has("code")) {
     console.error(`ERROR: code needs to be included in response`);
@@ -89,7 +95,9 @@ export const processTokenErrorResponse = async (response: Response) => {
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.4
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.1
-export const processTokenResponse = async (response: Response): Promise<AccessTokenResponseOptions | null> => {
+export const processTokenResponse = async (
+  response: Response,
+): Promise<AccessTokenResponseOptions | null> => {
   const json = await response.json();
   const res: AccessTokenResponseOptions = {
     access_token: json.access_token,

@@ -15,27 +15,50 @@ export type OAuth2Options = {
   codeChallengeMethod: "S256";
 };
 
-export type AuthorizationServerOptions = Pick<OAuth2Options, "authorizationEndpoint" | "tokenEndpoint">;
+export type AuthorizationServerOptions = Pick<
+  OAuth2Options,
+  "authorizationEndpoint" | "tokenEndpoint"
+>;
 
 // state and code_verifier (pkce) mandatory because why not
 export type OAuth2ClientOptions = Pick<
   OAuth2Options,
-  "clientId" | "clientSecret" | "clientRedirectURIs" | "scope" | "state" | "codeChallenge" | "codeVerifier"
+  | "clientId"
+  | "clientSecret"
+  | "clientRedirectURIs"
+  | "scope"
+  | "state"
+  | "codeChallenge"
+  | "codeVerifier"
 >;
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.1
 export type AuthorizationRequestOptions = Pick<
   OAuth2Options,
-  "responseType" | "clientId" | "redirectURI" | "scope" | "state" | "codeChallenge" | "codeChallengeMethod"
+  | "responseType"
+  | "clientId"
+  | "redirectURI"
+  | "scope"
+  | "state"
+  | "codeChallenge"
+  | "codeChallengeMethod"
 >;
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
-export type AuthorizationResponseOptions = Pick<OAuth2Options, "code" | "state">;
+export type AuthorizationResponseOptions = Pick<
+  OAuth2Options,
+  "code" | "state"
+>;
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3
 export type AccessTokenRequestOptions = Pick<
   OAuth2Options,
-  "grantType" | "code" | "redirectURI" | "clientId" | "clientSecret" | "codeVerifier"
+  | "grantType"
+  | "code"
+  | "redirectURI"
+  | "clientId"
+  | "clientSecret"
+  | "codeVerifier"
 >;
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.4

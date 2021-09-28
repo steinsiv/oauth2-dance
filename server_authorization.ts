@@ -7,8 +7,19 @@ import {
   OAuth2ClientOptions,
 } from "./src/oauth2.types.ts";
 import { URLAuthorizeResponse } from "./src/oauth2.ts";
-import { parseValidScopes, processAccessTokenRequest, processClientAuthentication } from "./src/dance.server.ts";
-import { Application, Context, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
+import {
+  parseValidScopes,
+  processAccessTokenRequest,
+  processClientAuthentication,
+} from "./src/dance.server.ts";
+import {
+  Application,
+  Context,
+  createHash,
+  cryptoRandomString,
+  dotEnvConfig,
+  Router,
+} from "./deps.ts";
 
 // @todo: /revoke
 // @todo: /introspect
@@ -31,7 +42,10 @@ const clients: OAuth2ClientOptions[] = [{
   codeChallenge: "N/A",
 }];
 
-const informResourceOwner = (ctx: Context, error: AuthorizationErrorResponseOptions) => {
+const informResourceOwner = (
+  ctx: Context,
+  error: AuthorizationErrorResponseOptions,
+) => {
   ctx.response.status = 400;
   ctx.response.headers.append("Content-Type", "application/json");
   ctx.response.body = error;
@@ -52,7 +66,8 @@ router.get("/authorize", (ctx) => {
     informResourceOwner(ctx, { error: "invalid_client" });
     return;
   }
-  const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri") || "N/A";
+  const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri") ||
+    "N/A";
   const isCallbackOk = client?.clientRedirectURIs.includes(reqCallbackUrl);
   if (!reqCallbackUrl || !isCallbackOk) {
     error = { error: "invalid_request", error_description: "Invalid callback" };
@@ -62,15 +77,23 @@ router.get("/authorize", (ctx) => {
 
   const reqState = ctx.request.url.searchParams.get("state");
   if (!reqState) {
-    error = { error: "invalid_request", error_description: "Missing state parameter" };
+    error = {
+      error: "invalid_request",
+      error_description: "Missing state parameter",
+    };
     informResourceOwner(ctx, error);
     return;
   }
 
   const reqChallenge = ctx.request.url.searchParams.get("code_challenge");
-  const reqChallengeMethod = ctx.request.url.searchParams.get("code_challenge_method");
+  const reqChallengeMethod = ctx.request.url.searchParams.get(
+    "code_challenge_method",
+  );
   if (!reqChallenge || !reqChallengeMethod) {
-    error = { error: "invalid_request", error_description: "Missing PKCE parameters" };
+    error = {
+      error: "invalid_request",
+      error_description: "Missing PKCE parameters",
+    };
     informResourceOwner(ctx, error);
     return;
   }
@@ -87,7 +110,10 @@ router.get("/authorize", (ctx) => {
   };
 
   // Store request until approval decision or TTL
-  const requestIdentifier: string = cryptoRandomString({ length: 12, type: "alphanumeric" });
+  const requestIdentifier: string = cryptoRandomString({
+    length: 12,
+    type: "alphanumeric",
+  });
   requestCache.push({ ident: requestIdentifier, req: authorizeRequest });
 
   //const html = await serveFile(req, "index.html"); @TODO
@@ -120,8 +146,14 @@ router.post("/approve", async (ctx) => {
     if (query) {
       const code: string = cryptoRandomString({ length: 12, type: "url-safe" });
       const state = query.req.state;
-      const responseOptions: AuthorizationResponseOptions = { code: code, state: state };
-      const UrlAuthorize = URLAuthorizeResponse(query.req.redirectURI, responseOptions);
+      const responseOptions: AuthorizationResponseOptions = {
+        code: code,
+        state: state,
+      };
+      const UrlAuthorize = URLAuthorizeResponse(
+        query.req.redirectURI,
+        responseOptions,
+      );
 
       codeCache.set(code, query.req);
 
@@ -155,9 +187,13 @@ router.post("/token", async (ctx) => {
   if (
     requestOptions && requestOptions.codeVerifier &&
     codeCache.get(requestOptions.code) &&
-    (codeCache.get(requestOptions.code)?.clientId === clientAuthenticated.clientId) &&
-    clientAuthenticated.clientRedirectURIs.includes(requestOptions.redirectURI) &&
-    sha256Hash.update(requestOptions.codeVerifier).toString("base64") === clientCodeRequest.codeChallenge
+    (codeCache.get(requestOptions.code)?.clientId ===
+      clientAuthenticated.clientId) &&
+    clientAuthenticated.clientRedirectURIs.includes(
+      requestOptions.redirectURI,
+    ) &&
+    sha256Hash.update(requestOptions.codeVerifier).toString("base64") ===
+      clientCodeRequest.codeChallenge
   ) {
     requestOptions ? codeCache.delete(requestOptions.code) : {}; // 🔥 burn code
 

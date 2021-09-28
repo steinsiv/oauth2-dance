@@ -5,9 +5,18 @@ import {
   AuthorizationServerOptions,
   OAuth2ClientOptions,
 } from "./src/oauth2.types.ts";
-import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
+import {
+  Application,
+  createHash,
+  cryptoRandomString,
+  dotEnvConfig,
+  Router,
+} from "./deps.ts";
 import { URLAuthorizeRequest } from "./src/oauth2.ts";
-import { processAuthorizationResponse, requestToken } from "./src/dance.client.ts";
+import {
+  processAuthorizationResponse,
+  requestToken,
+} from "./src/dance.client.ts";
 
 const env = dotEnvConfig();
 //console.log(dotEnvConfig({}));
@@ -28,8 +37,10 @@ const client: OAuth2ClientOptions = {
 };
 
 //client.codeVerifier = cryptoRandomString({ length: 32, type: "alphanumeric" });
-client.codeVerifier = "AuthorizationServerOptionsAuthorizationServerOptionsAuthorizationServerOptions";
-client.codeChallenge = createHash("sha256").update(client.codeVerifier).toString("base64");
+client.codeVerifier =
+  "AuthorizationServerOptionsAuthorizationServerOptionsAuthorizationServerOptions";
+client.codeChallenge = createHash("sha256").update(client.codeVerifier)
+  .toString("base64");
 
 const authorizeOptions: AuthorizationRequestOptions = {
   responseType: "code",
@@ -44,14 +55,19 @@ const authorizeOptions: AuthorizationRequestOptions = {
 const router = new Router();
 
 router.get("/authme", (context) => {
-  const UrlAuthorize = URLAuthorizeRequest(authorizationServer.authorizationEndpoint, authorizeOptions);
+  const UrlAuthorize = URLAuthorizeRequest(
+    authorizationServer.authorizationEndpoint,
+    authorizeOptions,
+  );
   console.log(`-> GET /authme ${UrlAuthorize}`);
   context.response.redirect(UrlAuthorize);
 });
 
 router.get("/callback", async (ctx) => {
   const response = processAuthorizationResponse(ctx.request.url, client.state);
-  console.log(`-> GET /callback, code : ${response?.code}, state: ${response?.state}`);
+  console.log(
+    `-> GET /callback, code : ${response?.code}, state: ${response?.state}`,
+  );
 
   if (response) {
     const accessTokenOptions: AccessTokenRequestOptions = {
@@ -62,7 +78,10 @@ router.get("/callback", async (ctx) => {
       clientSecret: client.clientSecret,
       codeVerifier: client.codeVerifier,
     };
-    const tokenResponse = await requestToken(authorizationServer.tokenEndpoint, accessTokenOptions);
+    const tokenResponse = await requestToken(
+      authorizationServer.tokenEndpoint,
+      accessTokenOptions,
+    );
     ctx.cookies.set("check", JSON.stringify(tokenResponse));
   }
   ctx.response.redirect(`/hooray`);
