@@ -8,7 +8,7 @@ export type OAuth2Options = {
   clientSecret?: string;
   clientRedirectURIs: string[];
   scope: string;
-  state: string;
+  state: string; // reverse CSRF
   code: string;
   codeVerifier: string;
   codeChallenge: string;
