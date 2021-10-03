@@ -1,4 +1,4 @@
-export type OAuth2Options = {
+type OAuth2Options = {
   grantType: "authorization_code";
   responseType: "code";
   authorizationEndpoint: string;
@@ -70,28 +70,42 @@ export type AccessTokenResponseOptions = {
   refresh_token?: string;
 };
 
-export type errorType =
+type ErrorType =
   | "invalid_request"
+  | "invalid_scope"
+  | "unauthorized_client";
+
+// https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
+export type TokenErrorType =
+  | ErrorType
   | "invalid_client"
   | "invalid_grant"
-  | "unauthorized_client"
-  | "unsupported_grant_type"
-  | "invalid_scope";
+  | "unsupported_grant_type";
+
+// https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1
+export type AuthorizationErrorType =
+  | ErrorType
+  | "access_denied"
+  | "unsupported_response_type"
+  | "temporarily_unavailable"
+  | "server_error";
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 export type ErrorResponseOptions = {
-  error: errorType;
   error_description?: string;
   error_uri?: string;
 };
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1
 export type AuthorizationErrorResponseOptions = ErrorResponseOptions & {
+  error: AuthorizationErrorType;
   state?: string;
 };
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-export type AccessTokenErrorResponseOptions = ErrorResponseOptions;
+export type AccessTokenErrorResponseOptions = ErrorResponseOptions & {
+  error: TokenErrorType;
+};
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-6
 export type RefreshTokenRequestOptions = {

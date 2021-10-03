@@ -3,9 +3,9 @@ import {
   AccessTokenRequestOptions,
   AccessTokenResponseOptions,
   AuthorizationErrorResponseOptions,
+  AuthorizationErrorType,
   AuthorizationRequestOptions,
   AuthorizationResponseOptions,
-  errorType,
 } from "./oauth2.types.ts";
 
 export const processAuthorizationRequest = ():
@@ -19,7 +19,7 @@ export const processAuthorizationRequest = ():
 export const processAuthorizeErrorResponse = (redirectionURI: URL) => {
   const parameters = redirectionURI.searchParams;
   const res: AuthorizationErrorResponseOptions = {
-    error: parameters.get("error") as errorType | "invalid_request",
+    error: parameters.get("error") as AuthorizationErrorType | "invalid_request",
     error_description: parameters.get("error_description") ?? undefined,
     error_uri: parameters.get("error_uri") ?? undefined,
   };
