@@ -8,6 +8,61 @@ import {
   OAuth2ClientOptions,
 } from "./oauth2.types.ts";
 
+export const processAuthorizeRequest = (
+  ctx: Context,
+  clients: OAuth2ClientOptions[],
+): AuthorizationRequestOptions | null => {
+  let authorizeRequest: AuthorizationRequestOptions;
+  let error: AuthorizationErrorResponseOptions | undefined;
+  const reqClientId = ctx.request.url.searchParams.get("client_id");
+  const client = clients.find((c) => c["clientId"] === reqClientId);
+  const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri") || "N/A";
+  const isCallbackOk = client?.clientRedirectURIs.includes(reqCallbackUrl);
+  const reqState = ctx.request.url.searchParams.get("state");
+  const reqRespType = ctx.request.url.searchParams.get("response_type");
+  const reqChallenge = ctx.request.url.searchParams.get("code_challenge");
+  const reqChallengeMethod = ctx.request.url.searchParams.get("code_challenge_method");
+
+  if (!reqClientId || !client) {
+    informResourceOwner(ctx, { error: "unauthorized_client" });
+  } else if (!reqCallbackUrl || !isCallbackOk) {
+    error = { error: "invalid_request", error_description: "Invalid redirect_uri" };
+    informResourceOwner(ctx, error);
+  } else if (!reqState) {
+    error = {
+      error: "invalid_request",
+      error_description: "State parameter is required by this authorization-server",
+    };
+    informResourceOwner(ctx, error);
+  } else if (!reqRespType || reqRespType !== "code") {
+    error = {
+      error: "unsupported_response_type",
+      error_description: 'REQUIRED.  Value MUST be set to "code"',
+    };
+    informResourceOwner(ctx, error);
+  } else if (!reqChallenge || !reqChallengeMethod) {
+    error = {
+      error: "invalid_request",
+      error_description: "Missing PKCE parameters",
+      state: reqState,
+    };
+    informResourceOwner(ctx, error);
+  } else {
+    const validScopes = parseValidScopes(ctx, client);
+    authorizeRequest = {
+      clientId: reqClientId,
+      state: reqState,
+      scope: validScopes,
+      codeChallenge: reqChallenge,
+      responseType: "code",
+      redirectURI: reqCallbackUrl,
+      codeChallengeMethod: "S256",
+    };
+    return authorizeRequest;
+  }
+  return null;
+};
+
 // https://datatracker.ietf.org/doc/html/rfc6749#section-2.3
 // https://datatracker.ietf.org/doc/html/rfc6749#section-3.2.1
 export const processClientAuthentication = async (
@@ -130,7 +185,7 @@ const processClientAuthenticationError = (
 };
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-3.3
-export const parseValidScopes = (
+const parseValidScopes = (
   ctx: Context,
   client: OAuth2ClientOptions,
 ): string => {
@@ -154,7 +209,7 @@ export const parseValidScopes = (
   return validScopes?.join(" ") || "";
 };
 
-export const informResourceOwner = (
+const informResourceOwner = (
   ctx: Context,
   error: AuthorizationErrorResponseOptions,
 ) => {
@@ -163,63 +218,8 @@ export const informResourceOwner = (
   ctx.response.body = error;
 };
 
-export const informClient = (ctx: Context, error: AccessTokenErrorResponseOptions) => {
+const informClient = (ctx: Context, error: AccessTokenErrorResponseOptions) => {
   ctx.response.status = 400;
   ctx.response.headers.append("Content-Type", "application/json");
   ctx.response.body = error;
-};
-
-export const processAuthorizeRequest = (
-  ctx: Context,
-  clients: OAuth2ClientOptions[],
-): AuthorizationRequestOptions | null => {
-  let authorizeRequest: AuthorizationRequestOptions;
-  let error: AuthorizationErrorResponseOptions | undefined;
-  const reqClientId = ctx.request.url.searchParams.get("client_id");
-  const client = clients.find((c) => c["clientId"] === reqClientId);
-  const reqCallbackUrl = ctx.request.url.searchParams.get("redirect_uri") || "N/A";
-  const isCallbackOk = client?.clientRedirectURIs.includes(reqCallbackUrl);
-  const reqState = ctx.request.url.searchParams.get("state");
-  const reqRespType = ctx.request.url.searchParams.get("response_type");
-  const reqChallenge = ctx.request.url.searchParams.get("code_challenge");
-  const reqChallengeMethod = ctx.request.url.searchParams.get("code_challenge_method");
-
-  if (!reqClientId || !client) {
-    informResourceOwner(ctx, { error: "unauthorized_client" });
-  } else if (!reqCallbackUrl || !isCallbackOk) {
-    error = { error: "invalid_request", error_description: "Invalid redirect_uri" };
-    informResourceOwner(ctx, error);
-  } else if (!reqState) {
-    error = {
-      error: "invalid_request",
-      error_description: "State parameter is required by this authorization-server",
-    };
-    informResourceOwner(ctx, error);
-  } else if (!reqRespType || reqRespType !== "code") {
-    error = {
-      error: "unsupported_response_type",
-      error_description: 'REQUIRED.  Value MUST be set to "code"',
-    };
-    informResourceOwner(ctx, error);
-  } else if (!reqChallenge || !reqChallengeMethod) {
-    error = {
-      error: "invalid_request",
-      error_description: "Missing PKCE parameters",
-      state: reqState,
-    };
-    informResourceOwner(ctx, error);
-  } else {
-    const validScopes = parseValidScopes(ctx, client);
-    authorizeRequest = {
-      clientId: reqClientId,
-      state: reqState,
-      scope: validScopes,
-      codeChallenge: reqChallenge,
-      responseType: "code",
-      redirectURI: reqCallbackUrl,
-      codeChallengeMethod: "S256",
-    };
-    return authorizeRequest;
-  }
-  return null;
 };

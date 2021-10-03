@@ -16,7 +16,7 @@ export const processAuthorizationRequest = ():
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1
 // Confusing use by client backend. @todo
-export const processAuthorizeErrorResponse = (redirectionURI: URL) => {
+const processAuthorizeErrorResponse = (redirectionURI: URL) => {
   const parameters = redirectionURI.searchParams;
   const res: AuthorizationErrorResponseOptions = {
     error: parameters.get("error") as AuthorizationErrorType | "invalid_request",
@@ -82,7 +82,7 @@ export const requestToken = async (
 };
 
 // https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
-export const processTokenErrorResponse = async (response: Response) => {
+const processTokenErrorResponse = async (response: Response) => {
   const json = await response.json();
   const res: AccessTokenErrorResponseOptions = {
     error: json.error,
