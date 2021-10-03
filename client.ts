@@ -1,25 +1,16 @@
-// deno-lint-ignore-file
 import {
   AccessTokenRequestOptions,
   AuthorizationRequestOptions,
   AuthorizationServerOptions,
   OAuth2ClientOptions,
-} from "./src/oauth2.types.ts";
-import {
-  Application,
-  createHash,
-  cryptoRandomString,
-  dotEnvConfig,
-  Router,
-} from "./deps.ts";
-import { URLAuthorizeRequest } from "./src/oauth2.ts";
-import {
   processAuthorizationResponse,
   requestToken,
-} from "./src/dance.client.ts";
+  URLAuthorizeRequest,
+} from "./mod.ts";
+import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
 
 const env = dotEnvConfig();
-//console.log(dotEnvConfig({}));
+console.log(dotEnvConfig({}));
 
 const authorizationServer: AuthorizationServerOptions = {
   authorizationEndpoint: env.DENO_AUTHORIZE_URL,
@@ -36,9 +27,8 @@ const client: OAuth2ClientOptions = {
   codeChallenge: "N/A",
 };
 
-//client.codeVerifier = cryptoRandomString({ length: 32, type: "alphanumeric" });
-client.codeVerifier =
-  "AuthorizationServerOptionsAuthorizationServerOptionsAuthorizationServerOptions";
+client.codeVerifier = cryptoRandomString({ length: 64, type: "alphanumeric" });
+//client.codeVerifier = "AuthorizationServerOptionsAuthorizationServerOptionsAuthorizationServerOptions";
 client.codeChallenge = createHash("sha256").update(client.codeVerifier)
   .toString("base64");
 

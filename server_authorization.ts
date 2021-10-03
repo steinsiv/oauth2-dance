@@ -3,9 +3,11 @@ import {
   AuthorizationRequestOptions,
   AuthorizationResponseOptions,
   OAuth2ClientOptions,
-} from "./src/oauth2.types.ts";
-import { URLAuthorizeResponse } from "./src/oauth2.ts";
-import { processAccessTokenRequest, processAuthorizeRequest, processClientAuthentication } from "./src/dance.server.ts";
+  processAccessTokenRequest,
+  processAuthorizeRequest,
+  processClientAuthentication,
+  URLAuthorizeResponse,
+} from "./mod.ts";
 import { Application, Context, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
 
 // @todo: /revoke
@@ -34,7 +36,7 @@ router.get("/authorize", (ctx: Context) => {
   const authorizeRequest = processAuthorizeRequest(ctx, clients);
   if (!authorizeRequest) return;
 
-  // Store parsed request until consent or TTL
+  // Store parsed request until consent OR TTL expires (@todo)
   const requestIdentifier: string = cryptoRandomString({ length: 12, type: "alphanumeric" });
   requestCache.push({ ident: requestIdentifier, req: authorizeRequest });
 
