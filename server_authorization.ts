@@ -6,7 +6,7 @@ import {
 } from "./src/oauth2.types.ts";
 import { URLAuthorizeResponse } from "./src/oauth2.ts";
 import { processAccessTokenRequest, processAuthorizeRequest, processClientAuthentication } from "./src/dance.server.ts";
-import { Application, Context, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
+import { Application, Context, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
 
 // @todo: /revoke
 // @todo: /introspect
