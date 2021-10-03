@@ -17,11 +17,15 @@ DENO_CLIENT_SECRET=clientsecret1
 DENO_CLIENT_REDIRECT_URL="http://localhost:3000/callback"
 ```
 
-### client
+### testing the dance
 
-`deno run --allow-read  --allow-net --allow-env --location=http://localhost ./client.ts`
+Create your `.env` file at root like the one above.
 
-### authorization-server
+start `client` and `server_authorization`
 
-`deno run --allow-read  --allow-net --allow-env --location=http://localhost ./server_authorization.ts`
+```sh
+$ deno run --allow-read  --allow-net --allow-env --location=http://localhost ./client.ts
+$ deno run --allow-read  --allow-net --allow-env --location=http://localhost ./server_authorization.ts
+```
 
+visit [http://localhost:3000/authme](http://localhost:3000/authme)
