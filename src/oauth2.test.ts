@@ -1,4 +1,4 @@
-import { URLAuthorizeRequest, URLTokenRequest } from "./oauth2.ts";
+import { URLAuthorizationErrorResponse, URLAuthorizeRequest, URLAuthorizeResponse, URLTokenRequest } from "./oauth2.ts";
 import {
   AccessTokenRequestOptions,
   AuthorizationErrorResponseOptions,
@@ -8,6 +8,8 @@ import {
 import { assertArrayContains, assertEquals } from "https://deno.land/std@0.71.0/testing/asserts.ts";
 
 const pkcePattern = /^[A-Za-z\d\-._~]{43,128}$/;
+const authorizationEndpoint = "http://authserver/authorize";
+const tokenEndpoint = "http://authserver/token";
 const codeVerifier = "sqKVI38Avyvmy09Kpbm3Nr3sc-T2zgqDANkSaUfoDel2d6T_oDXQ4GoExH";
 const codeChallenge = "UzHjoHbHtqswOdm4MbTA1Q4c7kQArW2tSvtsI7UxY68";
 const redirectURI = "http://client/callback";
@@ -18,7 +20,6 @@ const scope = "user.read";
 const authorizationCode = "YXj5mSC3d9IS";
 
 Deno.test("URLAuthorizeRequest with correct parameters", () => {
-  const authorizationEndpoint = "http://authserver/authorize";
   const options: AuthorizationRequestOptions = {
     responseType: "code",
     clientId: clientId,
@@ -47,8 +48,26 @@ Deno.test("URLAuthorizeRequest with correct parameters", () => {
   ]);
 });
 
+Deno.test("URLAuthorizeResponse with correct parameters", () => {
+  const options: AuthorizationResponseOptions = {
+    code: authorizationCode,
+    state: state,
+  };
+  const url = URLAuthorizeResponse(redirectURI, options);
+
+  const split = url.split("?");
+  assertEquals(split.length, 2);
+  assertEquals(split[0], redirectURI);
+
+  const params = split[1].split("&");
+  console.log(params);
+  assertArrayContains(params, [
+    `code=${authorizationCode}`,
+    `state=${state}`,
+  ]);
+});
+
 Deno.test("URLTokenRequest with correct parameters", () => {
-  const tokenEndpoint = "http://authserver/token";
   const options: AccessTokenRequestOptions = {
     grantType: "authorization_code",
     code: authorizationCode,
@@ -70,5 +89,24 @@ Deno.test("URLTokenRequest with correct parameters", () => {
     `code=${authorizationCode}`,
     `redirect_uri=${encodeURIComponent(redirectURI)}`,
     `code_verifier=${codeVerifier}`,
+  ]);
+});
+
+Deno.test("URLAuthorizationErrorResponse with correct parameters", () => {
+  const options: AuthorizationErrorResponseOptions = {
+    error: "invalid_request",
+    state: state,
+  };
+  const url = URLAuthorizationErrorResponse(redirectURI, options);
+
+  const split = url.split("?");
+  assertEquals(split.length, 2);
+  assertEquals(split[0], redirectURI);
+
+  const params = split[1].split("&");
+  console.log(params);
+  assertArrayContains(params, [
+    `error=invalid_request`,
+    `state=${state}`,
   ]);
 });

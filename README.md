@@ -17,7 +17,7 @@ DENO_CLIENT_SECRET=clientsecret1
 DENO_CLIENT_REDIRECT_URL="http://localhost:3000/callback"
 ```
 
-### testing the dance
+## testing the dance
 
 Create your `.env` file at root like the one above.
 
