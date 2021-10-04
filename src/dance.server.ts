@@ -96,7 +96,7 @@ export const processClientAuthentication = async (
   }
   return null;
 };
-
+// https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3
 export const processAccessTokenRequest = async (
   ctx: Context,
   clientAuthenticated: OAuth2ClientOptions,
@@ -152,7 +152,7 @@ export const processAccessTokenRequest = async (
   }
   return null;
 };
-
+// https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 const processAccessTokenRequestError = (
   ctx: Context,
   grantType: string | null,

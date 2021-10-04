@@ -8,7 +8,7 @@
       "name": "Deno: Run Client",
       "request": "launch",
       "type": "pwa-node",
-      "program": "client.ts",
+      "program": "oauth2_client.ts",
       "cwd": "${workspaceFolder}",
       "runtimeExecutable": "deno",
       "runtimeArgs": [
@@ -24,7 +24,23 @@
       "name": "Deno: Run AuthorizationServer",
       "request": "launch",
       "type": "pwa-node",
-      "program": "authorization_server.ts",
+      "program": "oauth2_server.ts",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "deno",
+      "runtimeArgs": [
+        "run",
+        "--unstable",
+        "--inspect",
+        "--allow-env",
+        "--allow-all"
+      ],
+      "attachSimplePort": 9229
+    },
+    {
+      "name": "Deno: Run ProtectedResource",
+      "request": "launch",
+      "type": "pwa-node",
+      "program": "oauth2_resource.ts",
       "cwd": "${workspaceFolder}",
       "runtimeExecutable": "deno",
       "runtimeArgs": [

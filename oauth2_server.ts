@@ -55,7 +55,7 @@ router.get("/authorize", (ctx: Context) => {
   ctx.response.body = writeout;
 });
 
-router.post("/approve", async (ctx) => {
+router.post("/approve", async (ctx: Context) => {
   console.log(`-> GET /token`);
   if (!ctx.request.hasBody || ctx.request.body().type !== "form") {
     return;
@@ -80,7 +80,7 @@ router.post("/approve", async (ctx) => {
   }
 });
 
-router.post("/token", async (ctx) => {
+router.post("/token", async (ctx: Context) => {
   const clientAuthenticated = await processClientAuthentication(ctx, clients);
   if (!clientAuthenticated || !ctx.request.hasBody) return;
 
@@ -103,7 +103,7 @@ router.post("/token", async (ctx) => {
 });
 
 const app = new Application();
-app.use(async (ctx, next) => {
+app.use(async (ctx: Context, next) => {
   await next();
   console.log(`${ctx.request.method} ${ctx.request.url}`);
 });
