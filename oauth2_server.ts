@@ -19,7 +19,7 @@ const env = dotEnvConfig();
 console.log(dotEnvConfig({}));
 
 const codeCache: Map<string, AuthorizationRequestOptions> = new Map();
-const requestCache: { ident: string; req: AuthorizationRequestOptions }[] = [];
+const requestCache: Map<string, AuthorizationRequestOptions> = new Map();
 
 const clients: OAuth2ClientOptions[] = [{
   clientId: env.DENO_CLIENT_ID,
@@ -36,9 +36,9 @@ router.get("/authorize", (ctx: Context) => {
   const authorizeRequest = processAuthorizeRequest(ctx, clients);
   if (!authorizeRequest) return;
 
-  // Store parsed request until consent OR TTL expires (@todo)
+  // Store parsed request until consent OR TTL expires (@todo TTL expliry)
   const requestIdentifier: string = cryptoRandomString({ length: 12, type: "alphanumeric" });
-  requestCache.push({ ident: requestIdentifier, req: authorizeRequest });
+  requestCache.set(requestIdentifier, authorizeRequest);
 
   const writeout = `
     <html>
@@ -62,21 +62,22 @@ router.post("/approve", async (ctx: Context) => {
   } else {
     const body = ctx.request.body();
     const params: URLSearchParams = await body.value;
+    const requestId = params.get("reqid") || "N/A";
 
     // Pull out original request
-    const query = requestCache.find((n) => n.ident === params.get("reqid"));
-
-    if (query) {
+    const authRequest = requestCache.get(requestId);
+    if (authRequest) {
       const code: string = cryptoRandomString({ length: 12, type: "url-safe" });
-      const state = query.req.state;
+      const state = authRequest.state;
       const responseOptions: AuthorizationResponseOptions = { code: code, state: state };
-      const UrlAuthorize = URLAuthorizeResponse(query.req.redirectURI, responseOptions);
+      const UrlAuthorize = URLAuthorizeResponse(authRequest.redirectURI, responseOptions);
 
-      codeCache.set(code, query.req); // Store decision
+      codeCache.set(code, authRequest); // Store decision
+      requestCache.delete(requestId); // 🔥 burn cached request
 
       console.log(`-> REDIRECT to client ${UrlAuthorize}`);
       ctx.response.redirect(UrlAuthorize);
-    }
+    } //@todo invalid requestId
   }
 });
 
@@ -97,6 +98,8 @@ router.post("/token", async (ctx: Context) => {
     refresh_token: cryptoRandomString({ length: 24, type: "alphanumeric" }),
   };
 
+  // @todo store token(s) for later introspection queries, RFC7662
+
   ctx.response.status = 200;
   ctx.response.headers.append("Content-Type", "application/json");
   ctx.response.body = accessToken;
@@ -112,5 +115,5 @@ const port = 9001;
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-console.info(`AUTHORIZATION SERVER Listening on :${port}`);
+console.info(`Authorization server listening on :${port}`);
 app.listen({ port: port });

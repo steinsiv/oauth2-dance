@@ -32,5 +32,5 @@ const port = 7000;
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-console.info(`AUTHORIZATION SERVER Listening on :${port}`);
+console.info(`Protected resource listening on :${port}`);
 app.listen({ port: port });
