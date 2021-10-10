@@ -7,8 +7,12 @@ import {
   processAuthorizeRequest,
   processClientAuthentication,
   URLAuthorizeResponse,
-} from "./mod.ts";
-import { Application, Context, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
+} from "../mod.ts";
+import { Application, Context, cryptoRandomString, dotEnvConfig, Router } from "../deps.ts";
+import { TokenStorage } from "./tokenstorage.ts";
+import error from "./error.ts";
+
+const db = new TokenStorage("tokens.db");
 
 // @todo: /revoke
 // @todo: /introspect
@@ -32,11 +36,10 @@ const clients: OAuth2ClientOptions[] = [{
 }];
 
 router.get("/authorize", (ctx: Context) => {
-  console.log(`-> GET /authorize`);
   const authorizeRequest = processAuthorizeRequest(ctx, clients);
   if (!authorizeRequest) return;
 
-  // Store parsed request until consent OR TTL expires (@todo TTL expliry)
+  // Store parsed request until consent OR TTL expires (@todo TTL expiry)
   const requestIdentifier: string = cryptoRandomString({ length: 12, type: "alphanumeric" });
   requestCache.set(requestIdentifier, authorizeRequest);
 
@@ -56,7 +59,6 @@ router.get("/authorize", (ctx: Context) => {
 });
 
 router.post("/approve", async (ctx: Context) => {
-  console.log(`-> GET /token`);
   if (!ctx.request.hasBody || ctx.request.body().type !== "form") {
     return;
   } else {
@@ -90,22 +92,24 @@ router.post("/token", async (ctx: Context) => {
 
   requestOptions ? codeCache.delete(requestOptions.code) : {}; // 🔥 burn code
 
-  // Issue token
+  // Issue tokens
   const accessToken: AccessTokenResponseOptions = {
     access_token: cryptoRandomString({ length: 24, type: "alphanumeric" }),
     token_type: "Bearer",
-    expires_in: 3600,
-    refresh_token: cryptoRandomString({ length: 24, type: "alphanumeric" }),
+    expires_in: 600,
   };
 
-  // @todo store token(s) for later introspection queries, RFC7662
-
+  // @todo store token(s) for resource introspection queries, RFC7662
+  db.insertToken(accessToken.access_token, "+10 minute");
+  db.purgeExpiredTokens();
+  db.dumpTokens();
   ctx.response.status = 200;
   ctx.response.headers.append("Content-Type", "application/json");
   ctx.response.body = accessToken;
 });
 
 const app = new Application();
+
 app.use(async (ctx: Context, next) => {
   await next();
   console.log(`${ctx.request.method} ${ctx.request.url}`);
@@ -114,6 +118,6 @@ app.use(async (ctx: Context, next) => {
 const port = 9001;
 app.use(router.routes());
 app.use(router.allowedMethods());
-
+app.use(error);
 console.info(`Authorization server listening on :${port}`);
 app.listen({ port: port });

@@ -208,6 +208,13 @@ const parseValidScopes = (
   }
   return validScopes?.join(" ") || "";
 };
+export const parseToken = (ctx: Context): { scheme: string | null; token: string | null } => {
+  const authorizationHeader = ctx.request.headers.get("Authorization");
+  const type = authorizationHeader ? authorizationHeader.split(" ")[0] : null;
+  const token = authorizationHeader ? authorizationHeader.split(" ")[1] : null;
+
+  return { scheme: type, token: token };
+};
 
 const informResourceOwner = (
   ctx: Context,

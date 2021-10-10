@@ -19,13 +19,16 @@ DENO_CLIENT_REDIRECT_URL="http://localhost:3000/callback"
 
 ## testing the dance
 
-Create your `.env` file at root like the one above.
+Create your `.env` file at root somewhat like the one above.
 
-start `client` and `server_authorization`
+start `client`, `server` and `resource` 
 
 ```sh
-$ deno run --allow-read  --allow-net --allow-env --location=http://localhost ./client.ts
-$ deno run --allow-read  --allow-net --allow-env --location=http://localhost ./server_authorization.ts
+$ deno run --allow-read --allow-net --allow-env --location=http://localhost ./examples/oauth2_client.ts
+$ deno run --allow-read --allow-write --allow-net --allow-env --location=http://localhost ./examples/oauth2_server.ts
+$ deno run --allow-read --allow-write --allow-net --allow-env --location=http://localhost ./examples/oauth2_resource.ts
 ```
 
 visit [http://localhost:3000/authme](http://localhost:3000/authme)
+
+Visit [http://localhost:7000/protected](http://localhost:7000/protected)

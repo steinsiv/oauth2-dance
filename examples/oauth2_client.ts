@@ -6,8 +6,9 @@ import {
   processAuthorizationResponse,
   requestToken,
   URLAuthorizeRequest,
-} from "./mod.ts";
-import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "./deps.ts";
+} from "../mod.ts";
+import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "../deps.ts";
+import error from "./error.ts";
 
 const env = dotEnvConfig();
 console.log(dotEnvConfig({}));
@@ -28,9 +29,7 @@ const client: OAuth2ClientOptions = {
 };
 
 client.codeVerifier = cryptoRandomString({ length: 64, type: "alphanumeric" });
-//client.codeVerifier = "AuthorizationServerOptionsAuthorizationServerOptionsAuthorizationServerOptions";
-client.codeChallenge = createHash("sha256").update(client.codeVerifier)
-  .toString("base64");
+client.codeChallenge = createHash("sha256").update(client.codeVerifier).toString("base64");
 
 const authorizeOptions: AuthorizationRequestOptions = {
   responseType: "code",
@@ -49,16 +48,11 @@ router.get("/authme", (context) => {
     authorizationServer.authorizationEndpoint,
     authorizeOptions,
   );
-  console.log(`-> GET /authme ${UrlAuthorize}`);
   context.response.redirect(UrlAuthorize);
 });
 
 router.get("/callback", async (ctx) => {
   const response = processAuthorizationResponse(ctx.request.url, client.state);
-  console.log(
-    `-> GET /callback, code : ${response?.code}, state: ${response?.state}`,
-  );
-
   if (response) {
     const accessTokenOptions: AccessTokenRequestOptions = {
       grantType: "authorization_code",
@@ -72,20 +66,21 @@ router.get("/callback", async (ctx) => {
       authorizationServer.tokenEndpoint,
       accessTokenOptions,
     );
-    ctx.cookies.set("check", JSON.stringify(tokenResponse));
+    ctx.response.status = 200;
+    ctx.response.type = "application/json";
+    ctx.response.body = tokenResponse;
   }
-  ctx.response.redirect(`/hooray`);
-});
-
-router.get("/hooray", (context) => {
-  context.response.body = "You're in! Check your cookie";
 });
 
 const app = new Application();
+app.use(async (ctx, next) => {
+  await next();
+  console.log(`${ctx.request.method} ${ctx.request.url}`);
+});
 const port = 3000;
 
 app.use(router.routes());
 app.use(router.allowedMethods());
+app.use(error);
 app.listen({ port: port });
-
-console.info(`CLIENT Listening on :${port}`);
+console.info(`Client listening on :${port}`);

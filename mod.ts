@@ -9,4 +9,9 @@ export type {
 
 export { URLAuthorizeRequest, URLAuthorizeResponse } from "./src/oauth2.ts";
 export { processAuthorizationResponse, requestToken } from "./src/dance.client.ts";
-export { processAccessTokenRequest, processAuthorizeRequest, processClientAuthentication } from "./src/dance.server.ts";
+export {
+  parseToken,
+  processAccessTokenRequest,
+  processAuthorizeRequest,
+  processClientAuthentication,
+} from "./src/dance.server.ts";
