@@ -12,9 +12,11 @@ This module is a WIP of rfc6749 and rfc 7636 and will hopefully suit as an entry
 ```conf
 DENO_AUTHORIZE_URL=http://localhost:9001/authorize
 DENO_TOKEN_URL=http://localhost:9001/token
+DENO_INTROSPECT_URL=http://localhost:9001/introspect
 DENO_CLIENT_ID=client1
 DENO_CLIENT_SECRET=clientsecret1
 DENO_CLIENT_REDIRECT_URL="http://localhost:3000/callback"
+DENO_FILE_TOKENS_DB="tokens.db"
 ```
 
 ## testing the dance

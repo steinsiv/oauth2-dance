@@ -1,7 +1,6 @@
 import { Application, Context, Router } from "../deps.ts";
 import { parseToken } from "../mod.ts";
 import { TokenStorage } from "./tokenstorage.ts";
-import error from "./error.ts";
 
 const router = new Router();
 const db = new TokenStorage("tokens.db");
@@ -30,6 +29,8 @@ app.use(async (ctx, next) => {
 const port = 7000;
 app.use(router.routes());
 app.use(router.allowedMethods());
-app.use(error);
+app.addEventListener("error", (err) => {
+  console.log(err);
+});
 console.info(`Protected resource listening on :${port}`);
 app.listen({ port: port });

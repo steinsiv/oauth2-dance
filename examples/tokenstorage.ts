@@ -1,10 +1,10 @@
-import { DB } from "https://deno.land/x/sqlite/mod.ts";
+import { SqliteDB } from "../deps.ts";
 
 export class TokenStorage {
-  private database: DB;
+  private database: SqliteDB;
 
   constructor(file: string) {
-    this.database = new DB(file);
+    this.database = new SqliteDB(file);
     this.database.query("CREATE TABLE IF NOT EXISTS tokens (token TEXT, expiry DATETIME)");
   }
   public purgeExpiredTokens = () => {

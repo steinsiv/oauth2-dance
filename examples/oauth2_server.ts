@@ -10,7 +10,6 @@ import {
 } from "../mod.ts";
 import { Application, Context, cryptoRandomString, dotEnvConfig, Router } from "../deps.ts";
 import { TokenStorage } from "./tokenstorage.ts";
-import error from "./error.ts";
 
 const db = new TokenStorage("tokens.db");
 
@@ -19,16 +18,15 @@ const db = new TokenStorage("tokens.db");
 // @todo: /refreshtoken
 
 const router = new Router();
-const env = dotEnvConfig();
-console.log(dotEnvConfig({}));
+console.log(dotEnvConfig({ export: true }));
 
 const codeCache: Map<string, AuthorizationRequestOptions> = new Map();
 const requestCache: Map<string, AuthorizationRequestOptions> = new Map();
 
 const clients: OAuth2ClientOptions[] = [{
-  clientId: env.DENO_CLIENT_ID,
-  clientSecret: env.DENO_CLIENT_SECRET,
-  clientRedirectURIs: ["http://localhost:3000/callback"],
+  clientId: Deno.env.get("DENO_CLIENT_ID") || "",
+  clientSecret: Deno.env.get("DENO_CLIENT_SECRET"),
+  clientRedirectURIs: [Deno.env.get("DENO_CLIENT_REDIRECT_URL") || ""],
   scope: "foo bar",
   state: "N/A",
   codeVerifier: "N/A",
@@ -77,7 +75,7 @@ router.post("/approve", async (ctx: Context) => {
       codeCache.set(code, authRequest); // Store decision
       requestCache.delete(requestId); // 🔥 burn cached request
 
-      console.log(`-> REDIRECT to client ${UrlAuthorize}`);
+      //console.log(`-> REDIRECT to client ${UrlAuthorize}`);
       ctx.response.redirect(UrlAuthorize);
     } //@todo invalid requestId
   }
@@ -118,6 +116,8 @@ app.use(async (ctx: Context, next) => {
 const port = 9001;
 app.use(router.routes());
 app.use(router.allowedMethods());
-app.use(error);
+app.addEventListener("error", (err) => {
+  console.log(err);
+});
 console.info(`Authorization server listening on :${port}`);
 app.listen({ port: port });

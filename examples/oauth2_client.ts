@@ -8,20 +8,19 @@ import {
   URLAuthorizeRequest,
 } from "../mod.ts";
 import { Application, createHash, cryptoRandomString, dotEnvConfig, Router } from "../deps.ts";
-import error from "./error.ts";
 
-const env = dotEnvConfig();
-console.log(dotEnvConfig({}));
+console.log(dotEnvConfig({ export: true }));
 
 const authorizationServer: AuthorizationServerOptions = {
-  authorizationEndpoint: env.DENO_AUTHORIZE_URL,
-  tokenEndpoint: env.DENO_TOKEN_URL,
+  authorizationEndpoint: Deno.env.get("DENO_AUTHORIZE_URL") || "",
+  tokenEndpoint: Deno.env.get("DENO_TOKEN_URL") || "",
+  introSpectEndpoint: Deno.env.get("DENO_INTROSPECT_URL") || "",
 };
 
 const client: OAuth2ClientOptions = {
-  clientId: env.DENO_CLIENT_ID,
-  clientSecret: env.DENO_CLIENT_SECRET,
-  clientRedirectURIs: [env.DENO_CLIENT_REDIRECT_URL],
+  clientId: Deno.env.get("DENO_CLIENT_ID") || "",
+  clientSecret: Deno.env.get("DENO_CLIENT_SECRET"),
+  clientRedirectURIs: [Deno.env.get("DENO_CLIENT_REDIRECT_URL") || ""],
   scope: "foo",
   state: cryptoRandomString({ length: 8, type: "url-safe" }),
   codeVerifier: "N/A",
@@ -81,6 +80,8 @@ const port = 3000;
 
 app.use(router.routes());
 app.use(router.allowedMethods());
-app.use(error);
+app.addEventListener("error", (err) => {
+  console.log(err);
+});
 app.listen({ port: port });
 console.info(`Client listening on :${port}`);

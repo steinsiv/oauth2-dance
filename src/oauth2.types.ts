@@ -3,6 +3,7 @@ type OAuth2Options = {
   responseType: "code";
   authorizationEndpoint: string;
   tokenEndpoint: string;
+  introSpectEndpoint: string;
   redirectURI: string;
   clientId: string;
   clientSecret?: string;
@@ -17,7 +18,7 @@ type OAuth2Options = {
 
 export type AuthorizationServerOptions = Pick<
   OAuth2Options,
-  "authorizationEndpoint" | "tokenEndpoint"
+  "authorizationEndpoint" | "tokenEndpoint" | "introSpectEndpoint"
 >;
 
 // state and code_verifier (pkce) mandatory because why not
