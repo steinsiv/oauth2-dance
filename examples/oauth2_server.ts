@@ -33,6 +33,8 @@ const clients: OAuth2ClientOptions[] = [{
   codeChallenge: "N/A",
 }];
 
+console.log(clients);
+
 router.get("/authorize", (ctx: Context) => {
   const authorizeRequest = processAuthorizeRequest(ctx, clients);
   if (!authorizeRequest) return;

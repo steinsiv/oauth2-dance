@@ -12,7 +12,7 @@ export class TokenStorage {
   };
   public dumpTokens = () => {
     for (const [token, expiry] of this.database.query("SELECT token,expiry FROM tokens")) {
-      console.log(`${token}, ${expiry}`);
+      console.log(`TOKENDB ${token}, ${expiry}`);
     }
   };
   public checkToken = (token: string) => {

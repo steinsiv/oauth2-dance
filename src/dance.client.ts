@@ -105,6 +105,5 @@ export const processTokenResponse = async (
     expires_in: json.expires_in,
     refresh_token: json.refresh_token,
   };
-  console.log(`Take The Token: ${JSON.stringify(res)}`);
   return res;
 };

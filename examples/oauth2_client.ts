@@ -26,7 +26,8 @@ const client: OAuth2ClientOptions = {
   codeVerifier: "N/A",
   codeChallenge: "N/A",
 };
-
+console.log(authorizationServer);
+console.log(client);
 client.codeVerifier = cryptoRandomString({ length: 64, type: "alphanumeric" });
 client.codeChallenge = createHash("sha256").update(client.codeVerifier).toString("base64");
 
@@ -68,6 +69,7 @@ router.get("/callback", async (ctx) => {
     ctx.response.status = 200;
     ctx.response.type = "application/json";
     ctx.response.body = tokenResponse;
+    console.log(`TOKEN Take The Token: ${JSON.stringify(tokenResponse)}`);
   }
 });
 
