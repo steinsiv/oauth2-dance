@@ -128,7 +128,13 @@ export const processAccessTokenRequest = async (
         codeVerifier: codeVerifier,
       };
 
-      const sha256Hash = createHash("sha256").update(accessTokenRequest.codeVerifier).toString("base64");
+      let sha256Hash = createHash("sha256").update(accessTokenRequest.codeVerifier).toString("base64");
+      sha256Hash = sha256Hash.split("=")[0];
+      sha256Hash = sha256Hash.replaceAll("+", "-");
+      sha256Hash = sha256Hash.replaceAll("/", "_");
+      clientCodeRequest.codeChallenge = clientCodeRequest.codeChallenge.split("=")[0];
+      clientCodeRequest.codeChallenge = clientCodeRequest.codeChallenge.replaceAll("+", "-");
+      clientCodeRequest.codeChallenge = clientCodeRequest.codeChallenge.replaceAll("/", "_");
       if (sha256Hash !== clientCodeRequest.codeChallenge) {
         informClient(ctx, { error: "invalid_request", error_description: "wrong code_verifier" });
         return null;
