@@ -100,7 +100,7 @@ router.post("/token", async (ctx: Context) => {
   };
 
   // @todo store token(s) for resource introspection queries, RFC7662
-  db.insertToken(accessToken.access_token, "+10 minute");
+  db.insertToken(accessToken.access_token, "protected.read", "+10 minute");
   db.purgeExpiredTokens();
   db.dumpTokens();
   ctx.response.status = 200;
