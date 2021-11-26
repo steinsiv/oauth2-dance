@@ -18,6 +18,8 @@ services:
        - "9001:9001"
     restart: always
     container_name: oa2server
+    volumes:
+      - './:/app'    
     environment:
       - DENO_CLIENT_ID=${DENO_CLIENT_ID}
       - DENO_CLIENT_SECRET=${DENO_CLIENT_SECRET}
@@ -29,5 +31,7 @@ services:
        - "7000:7000"
     restart: always
     container_name: oa2resource
+    volumes:
+      - './:/app'    
     environment:
       - DENO_INTROSPECT_URL=${DENO_AUTHORIZE_URL}

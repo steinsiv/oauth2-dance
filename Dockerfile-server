@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Cache the dependencies as a layer (the following two steps are re-run only when deps.ts is modified).
 # Ideally cache deps.ts will download and compile _all_ external files used in main.ts.
-COPY deps.ts mod.ts .
+COPY deps.ts mod.ts ./
 RUN deno cache deps.ts
 
 # These steps will be re-run upon each file change in your working directory:
@@ -16,7 +16,6 @@ COPY src src
 COPY examples examples
 
 # Compile the main app so that it doesn't need to be compiled each startup/entry.
-RUN deno cache ./examples/oauth2_server.ts
-RUN touch tokens.db
+RUN deno cache ./examples/oauth2_server.ts && touch tokens.db
 
 CMD ["run", "--allow-net","--allow-read", "--allow-write","--allow-env", "./examples/oauth2_server.ts"]
