@@ -19,7 +19,7 @@ services:
     restart: always
     container_name: oa2server
     volumes:
-      - './:/app'    
+      - "${PWD}/:/app"    
     environment:
       - DENO_CLIENT_ID=${DENO_CLIENT_ID}
       - DENO_CLIENT_SECRET=${DENO_CLIENT_SECRET}
@@ -32,6 +32,6 @@ services:
     restart: always
     container_name: oa2resource
     volumes:
-      - './:/app'    
+      - "${PWD}/:/app"
     environment:
       - DENO_INTROSPECT_URL=${DENO_AUTHORIZE_URL}

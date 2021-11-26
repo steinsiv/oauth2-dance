@@ -10,7 +10,7 @@ This module is a WIP of rfc6749 and rfc 7636 and will hopefully suit as an entry
 
 ...and since we are learning `TS` `Deno` and `OAuth2` as we go, expect the code to change frequently!
 
-## example `.env` file
+#### example `.env` file
 ```conf
 DENO_AUTHORIZE_URL=http://localhost:9001/authorize
 DENO_TOKEN_URL=http://localhost:9001/token
@@ -21,7 +21,9 @@ DENO_CLIENT_REDIRECT_URL="http://localhost:3000/callback"
 DENO_FILE_TOKENS_DB="tokens.db"
 ```
 
-## Test
+## Testing
+
+#### Deno
 
 1. Create your `.env` file in root folder like the one above.
 
@@ -40,18 +42,25 @@ $ deno run --allow-all --location=http://localhost ./examples/oauth2_resource.ts
 $ curl -H 'Authorization: Bearer <TOKEN>' http://localhost:7000/protected
 ```
 
-## Docker
+#### Docker
 
-1. Your `.env` need to change the line `DENO_TOKEN_URL=http://server:9001/token` to use server instead of localhost.
+1. **obs!** Your `.env` need to change the line `DENO_TOKEN_URL=http://server:9001/token` to use `server` instead of `localhost` in this setup.
 
-2. Verify environment-var replacements with `docker compose config`
+2. optional, verify environment-var replacements with `docker compose config`
 
-3. Build and run
+3. build images and run with docker-compose
 
 ```sh
 $ ./build-docker.sh
-$ docker compose up -d
+$ docker compose up (-d optionally)
 ```
+
+4. Visit http://localhost:3000/authme
+4. Test the protected resource with issued token:
+```sh
+$ curl -H 'Authorization: Bearer <TOKEN>' http://localhost:7000/protected
+```
+
 
 Output Logged:
 ```yml
@@ -65,7 +74,6 @@ oa2server    | TOKENDB hcYb8Ew40vYaD20usTg87t8H, 2021-10-11 15:16:14
 oa2server    | POST http://server:9001/token
 oa2client    | TOKEN Take The Token: {"access_token":"hcYb8Ew40vYaD20usTg87t8H","token_type":"Bearer","expires_in":600}
 oa2client    | GET http://localhost:3000/callback?code=ttdzwd3Bv4ik&state=X1GCu7df
-oa2resource  | 0
 oa2resource  | GET http://localhost:7000/protected
 
 ```

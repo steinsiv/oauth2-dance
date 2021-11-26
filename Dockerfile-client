@@ -1,21 +1,20 @@
 FROM denoland/deno:1.14.3
 
-# The port that your application listens to.
-EXPOSE 3000
-USER deno
 WORKDIR /app
 
-# Cache the dependencies as a layer (the following two steps are re-run only when deps.ts is modified).
-# Ideally cache deps.ts will download and compile _all_ external files used in main.ts.
+# Cache the dependencies as a layer
 COPY deps.ts mod.ts ./
 RUN deno cache deps.ts
 
-# These steps will be re-run upon each file change in your working directory:
+# These steps will be re-run upon each file change in your working directory
 COPY src src
 COPY examples examples
 
-# Compile the main app so that it doesn't need to be compiled each startup/entry.
 RUN deno cache ./examples/oauth2_client.ts
 
+EXPOSE 3000
+USER deno
 
 CMD ["run", "--allow-net","--allow-read", "--allow-write","--allow-env", "./examples/oauth2_client.ts"]
+
+# docker run --rm --mount type=bind,source="$(pwd)"/,target=/app/ -p 3000:3000 -it oa2client
